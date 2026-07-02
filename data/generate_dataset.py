@@ -42,128 +42,138 @@ np.random.seed(42)
 # ---------------------------------------------------------------------------
 # STEP 1: Load the REAL dataset (unmodified source of truth)
 # ---------------------------------------------------------------------------
-print("Loading real source dataset...")
-raw = pd.read_csv("source/A_Z_medicines_dataset_of_India.csv")
-print(f"  Loaded {len(raw):,} real rows from A-Z Medicine Dataset of India (Kaggle)")
+import os
 
-# Keep only currently available medicines (real flag in the dataset)
-raw = raw[raw["Is_discontinued"] == False].copy()
-print(f"  {len(raw):,} rows remain after dropping discontinued medicines")
+base_dir = os.path.dirname(os.path.abspath(__file__))
+source_csv = os.path.join(base_dir, "source", "A_Z_medicines_dataset_of_India.csv")
+catalog_csv = os.path.join(base_dir, "real_medicine_catalog.csv")
 
+if not os.path.exists(source_csv) and os.path.exists(catalog_csv):
+    print("Source dataset not found. Loading pre-compiled real_medicine_catalog.csv...")
+    drug_catalog = pd.read_csv(catalog_csv)
+else:
+    print("Loading real source dataset...")
+    raw = pd.read_csv(source_csv)
+    print(f"  Loaded {len(raw):,} real rows from A-Z Medicine Dataset of India (Kaggle)")
 
-# ---------------------------------------------------------------------------
-# STEP 2: Category mapping - label real rows using real composition text.
-# This is standard pharmacology classification (ATC-style grouping), applied
-# to the real 'short_composition1' column. We are not inventing drug facts;
-# we are tagging real medicines using known active-ingredient -> category
-# relationships (e.g. "Metformin" is a well-documented antidiabetic).
-# ---------------------------------------------------------------------------
-CATEGORY_KEYWORDS = {
-    "Analgesic":        ["paracetamol", "ibuprofen", "aceclofenac", "diclofenac",
-                          "aspirin", "naproxen", "tramadol", "mefenamic"],
-    "Antibiotic":        ["amoxycillin", "amoxicillin", "azithromycin", "ciprofloxacin",
-                          "doxycycline", "cefixime", "ceftriaxone", "levofloxacin",
-                          "ofloxacin", "clindamycin", "cefuroxime"],
-    "Antihistamine":     ["cetirizine", "levocetirizine", "fexofenadine", "loratadine",
-                          "montelukast", "chlorpheniramine"],
-    "Antidiabetic":      ["metformin", "glimepiride", "glipizide", "sitagliptin",
-                          "insulin", "vildagliptin", "voglibose"],
-    "Cardiovascular":    ["amlodipine", "atorvastatin", "losartan", "telmisartan",
-                          "atenolol", "metoprolol", "rosuvastatin", "clopidogrel",
-                          "ramipril", "enalapril"],
-    "Gastrointestinal":  ["omeprazole", "pantoprazole", "ranitidine", "domperidone",
-                          "rabeprazole", "esomeprazole", "ondansetron"],
-    "Neurological":      ["gabapentin", "sertraline", "escitalopram", "amitriptyline",
-                          "clonazepam", "pregabalin", "fluoxetine"],
-    "Hormonal":          ["levothyroxine", "thyroxine"],
-    "Respiratory":       ["salbutamol", "budesonide", "montelukast", "theophylline",
-                          "formoterol", "ipratropium"],
-    "Supplement":        ["vitamin", "calcium", "folic acid", "iron", "zinc",
-                          "multivitamin", "cholecalciferol"],
-    "Dermatological":    ["clobetasol", "mometasone", "betamethasone", "ketoconazole",
-                          "fusidic", "tacrolimus", "clotrimazole"],
-}
+    # Keep only currently available medicines (real flag in the dataset)
+    raw = raw[raw["Is_discontinued"] == False].copy()
+    print(f"  {len(raw):,} rows remain after dropping discontinued medicines")
 
 
-def assign_category(composition):
-    if pd.isna(composition):
+    # ---------------------------------------------------------------------------
+    # STEP 2: Category mapping - label real rows using real composition text.
+    # This is standard pharmacology classification (ATC-style grouping), applied
+    # to the real 'short_composition1' column. We are not inventing drug facts;
+    # we are tagging real medicines using known active-ingredient -> category
+    # relationships (e.g. "Metformin" is a well-documented antidiabetic).
+    # ---------------------------------------------------------------------------
+    CATEGORY_KEYWORDS = {
+        "Analgesic":        ["paracetamol", "ibuprofen", "aceclofenac", "diclofenac",
+                              "aspirin", "naproxen", "tramadol", "mefenamic"],
+        "Antibiotic":        ["amoxycillin", "amoxicillin", "azithromycin", "ciprofloxacin",
+                              "doxycycline", "cefixime", "ceftriaxone", "levofloxacin",
+                              "ofloxacin", "clindamycin", "cefuroxime"],
+        "Antihistamine":     ["cetirizine", "levocetirizine", "fexofenadine", "loratadine",
+                              "montelukast", "chlorpheniramine"],
+        "Antidiabetic":      ["metformin", "glimepiride", "glipizide", "sitagliptin",
+                              "insulin", "vildagliptin", "voglibose"],
+        "Cardiovascular":    ["amlodipine", "atorvastatin", "losartan", "telmisartan",
+                              "atenolol", "metoprolol", "rosuvastatin", "clopidogrel",
+                              "ramipril", "enalapril"],
+        "Gastrointestinal":  ["omeprazole", "pantoprazole", "ranitidine", "domperidone",
+                              "rabeprazole", "esomeprazole", "ondansetron"],
+        "Neurological":      ["gabapentin", "sertraline", "escitalopram", "amitriptyline",
+                              "clonazepam", "pregabalin", "fluoxetine"],
+        "Hormonal":          ["levothyroxine", "thyroxine"],
+        "Respiratory":       ["salbutamol", "budesonide", "montelukast", "theophylline",
+                              "formoterol", "ipratropium"],
+        "Supplement":        ["vitamin", "calcium", "folic acid", "iron", "zinc",
+                              "multivitamin", "cholecalciferol"],
+        "Dermatological":    ["clobetasol", "mometasone", "betamethasone", "ketoconazole",
+                              "fusidic", "tacrolimus", "clotrimazole"],
+    }
+
+
+    def assign_category(composition):
+        if pd.isna(composition):
+            return "Other"
+        text = composition.lower()
+        for category, keywords in CATEGORY_KEYWORDS.items():
+            for kw in keywords:
+                if kw in text:
+                    return category
         return "Other"
-    text = composition.lower()
-    for category, keywords in CATEGORY_KEYWORDS.items():
-        for kw in keywords:
-            if kw in text:
-                return category
-    return "Other"
 
 
-print("Tagging real rows with pharmacology category (based on real composition)...")
-raw["category"] = raw["short_composition1"].apply(assign_category)
+    print("Tagging real rows with pharmacology category (based on real composition)...")
+    raw["category"] = raw["short_composition1"].apply(assign_category)
 
-# Keep only categorized rows for our catalog (drop "Other" - too broad/noisy
-# for a focused dashboard demo). This is filtering, not fabricating.
-catalog_pool = raw[raw["category"] != "Other"].copy()
-print(f"  {len(catalog_pool):,} real rows matched a known category")
-print(catalog_pool["category"].value_counts())
+    # Keep only categorized rows for our catalog (drop "Other" - too broad/noisy
+    # for a focused dashboard demo). This is filtering, not fabricating.
+    catalog_pool = raw[raw["category"] != "Other"].copy()
+    print(f"  {len(catalog_pool):,} real rows matched a known category")
+    print(catalog_pool["category"].value_counts())
 
 
-# ---------------------------------------------------------------------------
-# STEP 3: Compute REAL per-unit price from REAL pack price + REAL pack size.
-# ---------------------------------------------------------------------------
-def extract_pack_count(label):
-    """Extract a rough unit count from labels like 'strip of 10 tablets',
-    'bottle of 100 ml Syrup', 'vial of 1 Injection'. Falls back to 1 if
-    no number is found (e.g. single-unit packs)."""
-    if pd.isna(label):
+    # ---------------------------------------------------------------------------
+    # STEP 3: Compute REAL per-unit price from REAL pack price + REAL pack size.
+    # ---------------------------------------------------------------------------
+    def extract_pack_count(label):
+        """Extract a rough unit count from labels like 'strip of 10 tablets',
+        'bottle of 100 ml Syrup', 'vial of 1 Injection'. Falls back to 1 if
+        no number is found (e.g. single-unit packs)."""
+        if pd.isna(label):
+            return 1
+        match = re.search(r"of\s+(\d+)", label)
+        if match:
+            return max(int(match.group(1)), 1)
         return 1
-    match = re.search(r"of\s+(\d+)", label)
-    if match:
-        return max(int(match.group(1)), 1)
-    return 1
 
 
-catalog_pool["pack_count"] = catalog_pool["pack_size_label"].apply(extract_pack_count)
-catalog_pool["unit_price_inr"] = (catalog_pool["price(₹)"] / catalog_pool["pack_count"]).round(2)
+    catalog_pool["pack_count"] = catalog_pool["pack_size_label"].apply(extract_pack_count)
+    catalog_pool["unit_price_inr"] = (catalog_pool["price(₹)"] / catalog_pool["pack_count"]).round(2)
 
-# Drop rows with unrealistic computed unit price (data noise: free samples,
-# bulk industrial packs, etc.) - keeping the catalog clean and demo-usable.
-catalog_pool = catalog_pool[(catalog_pool["unit_price_inr"] > 0.5) & (catalog_pool["unit_price_inr"] < 2000)]
+    # Drop rows with unrealistic computed unit price (data noise: free samples,
+    # bulk industrial packs, etc.) - keeping the catalog clean and demo-usable.
+    catalog_pool = catalog_pool[(catalog_pool["unit_price_inr"] > 0.5) & (catalog_pool["unit_price_inr"] < 2000)]
 
-# Sample a manageable, diverse catalog: up to 40 real medicines per category
-catalog_rows = []
-for category in CATEGORY_KEYWORDS.keys():
-    subset = catalog_pool[catalog_pool["category"] == category]
-    if len(subset) == 0:
-        continue
-    sample_n = min(40, len(subset))
-    sampled = subset.sample(n=sample_n, random_state=42)
-    catalog_rows.append(sampled)
+    # Sample a manageable, diverse catalog: up to 40 real medicines per category
+    catalog_rows = []
+    for category in CATEGORY_KEYWORDS.keys():
+        subset = catalog_pool[catalog_pool["category"] == category]
+        if len(subset) == 0:
+            continue
+        sample_n = min(40, len(subset))
+        sampled = subset.sample(n=sample_n, random_state=42)
+        catalog_rows.append(sampled)
 
-drug_catalog_df = pd.concat(catalog_rows, ignore_index=True)
-drug_catalog_df = drug_catalog_df.drop_duplicates(subset=["name"]).reset_index(drop=True)
+    drug_catalog_df = pd.concat(catalog_rows, ignore_index=True)
+    drug_catalog_df = drug_catalog_df.drop_duplicates(subset=["name"]).reset_index(drop=True)
 
-# Rx vs OTC heuristic: pack types like injections/IV are always Rx; common
-# OTC categories (analgesic, antihistamine, supplement) skew OTC unless
-# they're a controlled-sounding form. This mirrors real-world dispensing
-# patterns in Indian pharmacies, applied to the real product names.
-def guess_otc_rx(row):
-    if "injection" in str(row["pack_size_label"]).lower():
-        return "Rx"
-    if row["category"] in ("Antibiotic", "Cardiovascular", "Antidiabetic", "Neurological", "Hormonal"):
-        return "Rx"
-    return "OTC"
+    # Rx vs OTC heuristic: pack types like injections/IV are always Rx; common
+    # OTC categories (analgesic, antihistamine, supplement) skew OTC unless
+    # they're a controlled-sounding form. This mirrors real-world dispensing
+    # patterns in Indian pharmacies, applied to the real product names.
+    def guess_otc_rx(row):
+        if "injection" in str(row["pack_size_label"]).lower():
+            return "Rx"
+        if row["category"] in ("Antibiotic", "Cardiovascular", "Antidiabetic", "Neurological", "Hormonal"):
+            return "Rx"
+        return "OTC"
 
 
-drug_catalog_df["otc_or_rx"] = drug_catalog_df.apply(guess_otc_rx, axis=1)
+    drug_catalog_df["otc_or_rx"] = drug_catalog_df.apply(guess_otc_rx, axis=1)
 
-drug_catalog = drug_catalog_df[[
-    "name", "category", "manufacturer_name", "unit_price_inr", "otc_or_rx"
-]].rename(columns={"name": "drug_name", "manufacturer_name": "manufacturer"})
+    drug_catalog = drug_catalog_df[[
+        "name", "category", "manufacturer_name", "unit_price_inr", "otc_or_rx"
+    ]].rename(columns={"name": "drug_name", "manufacturer_name": "manufacturer"})
 
-print(f"\nFinal real-medicine catalog: {len(drug_catalog)} unique real products")
-print(drug_catalog.head(5))
+    print(f"\nFinal real-medicine catalog: {len(drug_catalog)} unique real products")
+    print(drug_catalog.head(5))
 
-drug_catalog.to_csv("real_medicine_catalog.csv", index=False)
-print("Saved real_medicine_catalog.csv (the curated real-data layer)")
+    drug_catalog.to_csv(catalog_csv, index=False)
+    print("Saved real_medicine_catalog.csv (the curated real-data layer)")
 
 
 # ---------------------------------------------------------------------------
@@ -261,9 +271,9 @@ df_sales = pd.DataFrame(sales_rows)
 # ---------------------------------------------------------------------------
 # STEP 5: Save everything
 # ---------------------------------------------------------------------------
-df_pharmacies.to_csv("pharmacies.csv", index=False)
-df_stock.to_csv("stock.csv", index=False)
-df_sales.to_csv("sales_transactions.csv", index=False)
+df_pharmacies.to_csv(os.path.join(base_dir, "pharmacies.csv"), index=False)
+df_stock.to_csv(os.path.join(base_dir, "stock.csv"), index=False)
+df_sales.to_csv(os.path.join(base_dir, "sales_transactions.csv"), index=False)
 
 print("\n=== DONE ===")
 print(f"Real medicine catalog : {len(drug_catalog)} real products (real_medicine_catalog.csv)")

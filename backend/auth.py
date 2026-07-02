@@ -43,8 +43,11 @@ def load_users():
 
 
 def save_users(users: dict):
-    with open(USERS_FILE, "w") as f:
-        json.dump(users, f, indent=2)
+    try:
+        with open(USERS_FILE, "w") as f:
+            json.dump(users, f, indent=2)
+    except (IOError, OSError) as e:
+        print(f"Warning: Could not save users.json (filesystem may be read-only on Vercel): {e}")
 
 
 class TokenData(BaseModel):

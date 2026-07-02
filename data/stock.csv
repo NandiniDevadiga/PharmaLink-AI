@@ -1,0 +1,312 @@
+pharmacy_id,pharmacy_name,drug_name,category,manufacturer,unit_price_inr,stock_qty,otc_or_rx
+PH001,Andheri MedPlus,Paracetamol 500mg,Analgesic,Cipla,12.17,174,OTC
+PH001,Andheri MedPlus,Ibuprofen 400mg,Analgesic,Sun Pharma,18.98,107,OTC
+PH001,Andheri MedPlus,Aspirin 75mg,Analgesic,Bayer,10.29,63,OTC
+PH001,Andheri MedPlus,Azithromycin 500mg,Antibiotic,Pfizer,86.42,228,Rx
+PH001,Andheri MedPlus,Ciprofloxacin 500mg,Antibiotic,Cipla,39.97,20,Rx
+PH001,Andheri MedPlus,Doxycycline 100mg,Antibiotic,Sun Pharma,30.38,17,Rx
+PH001,Andheri MedPlus,Cetirizine 10mg,Antihistamine,Dr. Reddy's,17.06,59,OTC
+PH001,Andheri MedPlus,Montelukast 10mg,Antihistamine,Merck,156.12,249,Rx
+PH001,Andheri MedPlus,Loratadine 10mg,Antihistamine,Cipla,27.33,52,OTC
+PH001,Andheri MedPlus,Metformin 500mg,Antidiabetic,Sun Pharma,19.15,91,Rx
+PH001,Andheri MedPlus,Glimepiride 2mg,Antidiabetic,Novartis,35.35,198,Rx
+PH001,Andheri MedPlus,Insulin Glargine,Antidiabetic,Sanofi,473.62,7,Rx
+PH001,Andheri MedPlus,Amlodipine 5mg,Cardiovascular,Pfizer,22.71,205,Rx
+PH001,Andheri MedPlus,Atorvastatin 10mg,Cardiovascular,Dr. Reddy's,39.91,49,Rx
+PH001,Andheri MedPlus,Losartan 50mg,Cardiovascular,Cipla,34.1,1,Rx
+PH001,Andheri MedPlus,Omeprazole 20mg,Gastrointestinal,Sun Pharma,18.11,53,OTC
+PH001,Andheri MedPlus,Ranitidine 150mg,Gastrointestinal,GSK,14.51,53,OTC
+PH001,Andheri MedPlus,Gabapentin 300mg,Neurological,Pfizer,118.93,145,Rx
+PH001,Andheri MedPlus,Levothyroxine 50mcg,Hormonal,Abbott,30.63,161,Rx
+PH001,Andheri MedPlus,Salbutamol Syrup,Respiratory,Cipla,54.93,227,OTC
+PH001,Andheri MedPlus,Vitamin D3 60K,Supplement,Mankind,33.58,47,OTC
+PH001,Andheri MedPlus,Vitamin C 500mg,Supplement,HealthVit,24.54,205,OTC
+PH001,Andheri MedPlus,Multivitamin Tablets,Supplement,Himalaya,90.15,248,OTC
+PH001,Andheri MedPlus,ORS Sachets,Electrolyte,FDC,9.12,212,OTC
+PH001,Andheri MedPlus,Calamine Lotion,Personal Care,Piramal,64.82,81,OTC
+PH002,Bandra Apollo Pharmacy,Paracetamol 500mg,Analgesic,Cipla,12.42,23,OTC
+PH002,Bandra Apollo Pharmacy,Ibuprofen 400mg,Analgesic,Sun Pharma,17.81,187,OTC
+PH002,Bandra Apollo Pharmacy,Aspirin 75mg,Analgesic,Bayer,10.36,40,OTC
+PH002,Bandra Apollo Pharmacy,Diclofenac 50mg,Analgesic,Novartis,21.43,44,Rx
+PH002,Bandra Apollo Pharmacy,Amoxicillin 500mg,Antibiotic,GSK,41.34,70,Rx
+PH002,Bandra Apollo Pharmacy,Azithromycin 500mg,Antibiotic,Pfizer,85.5,128,Rx
+PH002,Bandra Apollo Pharmacy,Ciprofloxacin 500mg,Antibiotic,Cipla,36.09,215,Rx
+PH002,Bandra Apollo Pharmacy,Doxycycline 100mg,Antibiotic,Sun Pharma,27.11,242,Rx
+PH002,Bandra Apollo Pharmacy,Cetirizine 10mg,Antihistamine,Dr. Reddy's,16.15,162,OTC
+PH002,Bandra Apollo Pharmacy,Montelukast 10mg,Antihistamine,Merck,164.63,122,Rx
+PH002,Bandra Apollo Pharmacy,Loratadine 10mg,Antihistamine,Cipla,25.72,230,OTC
+PH002,Bandra Apollo Pharmacy,Metformin 500mg,Antidiabetic,Sun Pharma,21.26,27,Rx
+PH002,Bandra Apollo Pharmacy,Glimepiride 2mg,Antidiabetic,Novartis,39.05,71,Rx
+PH002,Bandra Apollo Pharmacy,Insulin Glargine,Antidiabetic,Sanofi,455.56,32,Rx
+PH002,Bandra Apollo Pharmacy,Atorvastatin 10mg,Cardiovascular,Dr. Reddy's,36.64,150,Rx
+PH002,Bandra Apollo Pharmacy,Losartan 50mg,Cardiovascular,Cipla,34.15,36,Rx
+PH002,Bandra Apollo Pharmacy,Omeprazole 20mg,Gastrointestinal,Sun Pharma,19.48,103,OTC
+PH002,Bandra Apollo Pharmacy,Pantoprazole 40mg,Gastrointestinal,Cipla,23.25,34,Rx
+PH002,Bandra Apollo Pharmacy,Ranitidine 150mg,Gastrointestinal,GSK,14.25,100,OTC
+PH002,Bandra Apollo Pharmacy,Gabapentin 300mg,Neurological,Pfizer,149.72,130,Rx
+PH002,Bandra Apollo Pharmacy,Sertraline 50mg,Neurological,Zydus,65.41,217,Rx
+PH002,Bandra Apollo Pharmacy,Levothyroxine 50mcg,Hormonal,Abbott,26.85,141,Rx
+PH002,Bandra Apollo Pharmacy,Albuterol Inhaler,Respiratory,Teva,225.16,136,Rx
+PH002,Bandra Apollo Pharmacy,Salbutamol Syrup,Respiratory,Cipla,59.27,89,OTC
+PH002,Bandra Apollo Pharmacy,Vitamin D3 60K,Supplement,Mankind,29.0,204,OTC
+PH002,Bandra Apollo Pharmacy,Vitamin C 500mg,Supplement,HealthVit,23.76,95,OTC
+PH002,Bandra Apollo Pharmacy,Multivitamin Tablets,Supplement,Himalaya,100.61,51,OTC
+PH002,Bandra Apollo Pharmacy,ORS Sachets,Electrolyte,FDC,8.33,131,OTC
+PH002,Bandra Apollo Pharmacy,Calamine Lotion,Personal Care,Piramal,73.25,150,OTC
+PH003,Dadar MedPlus,Paracetamol 500mg,Analgesic,Cipla,12.61,142,OTC
+PH003,Dadar MedPlus,Ibuprofen 400mg,Analgesic,Sun Pharma,19.6,35,OTC
+PH003,Dadar MedPlus,Aspirin 75mg,Analgesic,Bayer,11.36,70,OTC
+PH003,Dadar MedPlus,Diclofenac 50mg,Analgesic,Novartis,21.39,85,Rx
+PH003,Dadar MedPlus,Amoxicillin 500mg,Antibiotic,GSK,50.41,169,Rx
+PH003,Dadar MedPlus,Cetirizine 10mg,Antihistamine,Dr. Reddy's,16.53,184,OTC
+PH003,Dadar MedPlus,Montelukast 10mg,Antihistamine,Merck,138.96,27,Rx
+PH003,Dadar MedPlus,Loratadine 10mg,Antihistamine,Cipla,30.83,43,OTC
+PH003,Dadar MedPlus,Glimepiride 2mg,Antidiabetic,Novartis,35.14,189,Rx
+PH003,Dadar MedPlus,Insulin Glargine,Antidiabetic,Sanofi,465.68,249,Rx
+PH003,Dadar MedPlus,Amlodipine 5mg,Cardiovascular,Pfizer,23.26,216,Rx
+PH003,Dadar MedPlus,Atorvastatin 10mg,Cardiovascular,Dr. Reddy's,39.18,224,Rx
+PH003,Dadar MedPlus,Losartan 50mg,Cardiovascular,Cipla,30.98,26,Rx
+PH003,Dadar MedPlus,Pantoprazole 40mg,Gastrointestinal,Cipla,24.16,115,Rx
+PH003,Dadar MedPlus,Ranitidine 150mg,Gastrointestinal,GSK,13.83,2,OTC
+PH003,Dadar MedPlus,Gabapentin 300mg,Neurological,Pfizer,118.13,199,Rx
+PH003,Dadar MedPlus,Sertraline 50mg,Neurological,Zydus,62.01,61,Rx
+PH003,Dadar MedPlus,Levothyroxine 50mcg,Hormonal,Abbott,26.75,50,Rx
+PH003,Dadar MedPlus,Salbutamol Syrup,Respiratory,Cipla,53.2,151,OTC
+PH003,Dadar MedPlus,Vitamin D3 60K,Supplement,Mankind,36.34,117,OTC
+PH003,Dadar MedPlus,Vitamin C 500mg,Supplement,HealthVit,23.87,215,OTC
+PH003,Dadar MedPlus,Multivitamin Tablets,Supplement,Himalaya,102.2,112,OTC
+PH003,Dadar MedPlus,ORS Sachets,Electrolyte,FDC,7.33,185,OTC
+PH003,Dadar MedPlus,Calamine Lotion,Personal Care,Piramal,74.14,38,OTC
+PH004,Powai MedPlus,Paracetamol 500mg,Analgesic,Cipla,12.29,112,OTC
+PH004,Powai MedPlus,Ibuprofen 400mg,Analgesic,Sun Pharma,16.87,183,OTC
+PH004,Powai MedPlus,Aspirin 75mg,Analgesic,Bayer,9.09,112,OTC
+PH004,Powai MedPlus,Diclofenac 50mg,Analgesic,Novartis,25.17,219,Rx
+PH004,Powai MedPlus,Amoxicillin 500mg,Antibiotic,GSK,41.08,228,Rx
+PH004,Powai MedPlus,Azithromycin 500mg,Antibiotic,Pfizer,83.83,128,Rx
+PH004,Powai MedPlus,Ciprofloxacin 500mg,Antibiotic,Cipla,36.48,129,Rx
+PH004,Powai MedPlus,Doxycycline 100mg,Antibiotic,Sun Pharma,30.98,217,Rx
+PH004,Powai MedPlus,Cetirizine 10mg,Antihistamine,Dr. Reddy's,17.2,159,OTC
+PH004,Powai MedPlus,Montelukast 10mg,Antihistamine,Merck,157.23,182,Rx
+PH004,Powai MedPlus,Loratadine 10mg,Antihistamine,Cipla,30.53,122,OTC
+PH004,Powai MedPlus,Glimepiride 2mg,Antidiabetic,Novartis,33.62,37,Rx
+PH004,Powai MedPlus,Amlodipine 5mg,Cardiovascular,Pfizer,24.8,115,Rx
+PH004,Powai MedPlus,Atorvastatin 10mg,Cardiovascular,Dr. Reddy's,45.83,213,Rx
+PH004,Powai MedPlus,Losartan 50mg,Cardiovascular,Cipla,33.09,239,Rx
+PH004,Powai MedPlus,Omeprazole 20mg,Gastrointestinal,Sun Pharma,19.79,200,OTC
+PH004,Powai MedPlus,Ranitidine 150mg,Gastrointestinal,GSK,13.72,69,OTC
+PH004,Powai MedPlus,Gabapentin 300mg,Neurological,Pfizer,140.69,2,Rx
+PH004,Powai MedPlus,Levothyroxine 50mcg,Hormonal,Abbott,29.34,186,Rx
+PH004,Powai MedPlus,Salbutamol Syrup,Respiratory,Cipla,52.53,89,OTC
+PH004,Powai MedPlus,Vitamin D3 60K,Supplement,Mankind,32.9,146,OTC
+PH004,Powai MedPlus,Multivitamin Tablets,Supplement,Himalaya,93.78,198,OTC
+PH004,Powai MedPlus,ORS Sachets,Electrolyte,FDC,7.55,160,OTC
+PH004,Powai MedPlus,Calamine Lotion,Personal Care,Piramal,64.96,38,OTC
+PH005,Chembur MedPlus,Paracetamol 500mg,Analgesic,Cipla,13.61,128,OTC
+PH005,Chembur MedPlus,Ibuprofen 400mg,Analgesic,Sun Pharma,19.24,184,OTC
+PH005,Chembur MedPlus,Aspirin 75mg,Analgesic,Bayer,9.28,150,OTC
+PH005,Chembur MedPlus,Diclofenac 50mg,Analgesic,Novartis,22.78,41,Rx
+PH005,Chembur MedPlus,Amoxicillin 500mg,Antibiotic,GSK,43.4,143,Rx
+PH005,Chembur MedPlus,Azithromycin 500mg,Antibiotic,Pfizer,93.87,248,Rx
+PH005,Chembur MedPlus,Ciprofloxacin 500mg,Antibiotic,Cipla,39.11,112,Rx
+PH005,Chembur MedPlus,Doxycycline 100mg,Antibiotic,Sun Pharma,28.81,47,Rx
+PH005,Chembur MedPlus,Cetirizine 10mg,Antihistamine,Dr. Reddy's,17.12,196,OTC
+PH005,Chembur MedPlus,Montelukast 10mg,Antihistamine,Merck,168.77,246,Rx
+PH005,Chembur MedPlus,Loratadine 10mg,Antihistamine,Cipla,27.57,98,OTC
+PH005,Chembur MedPlus,Glimepiride 2mg,Antidiabetic,Novartis,37.63,207,Rx
+PH005,Chembur MedPlus,Insulin Glargine,Antidiabetic,Sanofi,505.92,151,Rx
+PH005,Chembur MedPlus,Amlodipine 5mg,Cardiovascular,Pfizer,25.03,160,Rx
+PH005,Chembur MedPlus,Atorvastatin 10mg,Cardiovascular,Dr. Reddy's,42.42,74,Rx
+PH005,Chembur MedPlus,Losartan 50mg,Cardiovascular,Cipla,36.29,163,Rx
+PH005,Chembur MedPlus,Pantoprazole 40mg,Gastrointestinal,Cipla,26.99,83,Rx
+PH005,Chembur MedPlus,Ranitidine 150mg,Gastrointestinal,GSK,14.63,111,OTC
+PH005,Chembur MedPlus,Gabapentin 300mg,Neurological,Pfizer,121.22,98,Rx
+PH005,Chembur MedPlus,Sertraline 50mg,Neurological,Zydus,68.6,145,Rx
+PH005,Chembur MedPlus,Albuterol Inhaler,Respiratory,Teva,206.84,81,Rx
+PH005,Chembur MedPlus,Salbutamol Syrup,Respiratory,Cipla,56.18,162,OTC
+PH005,Chembur MedPlus,Vitamin D3 60K,Supplement,Mankind,34.02,168,OTC
+PH005,Chembur MedPlus,Multivitamin Tablets,Supplement,Himalaya,89.68,67,OTC
+PH005,Chembur MedPlus,ORS Sachets,Electrolyte,FDC,7.67,20,OTC
+PH005,Chembur MedPlus,Calamine Lotion,Personal Care,Piramal,61.41,247,OTC
+PH006,Borivali Apollo Pharmacy,Paracetamol 500mg,Analgesic,Cipla,12.75,134,OTC
+PH006,Borivali Apollo Pharmacy,Ibuprofen 400mg,Analgesic,Sun Pharma,19.44,127,OTC
+PH006,Borivali Apollo Pharmacy,Aspirin 75mg,Analgesic,Bayer,10.42,203,OTC
+PH006,Borivali Apollo Pharmacy,Amoxicillin 500mg,Antibiotic,GSK,46.22,213,Rx
+PH006,Borivali Apollo Pharmacy,Azithromycin 500mg,Antibiotic,Pfizer,82.14,237,Rx
+PH006,Borivali Apollo Pharmacy,Ciprofloxacin 500mg,Antibiotic,Cipla,39.8,229,Rx
+PH006,Borivali Apollo Pharmacy,Doxycycline 100mg,Antibiotic,Sun Pharma,29.95,181,Rx
+PH006,Borivali Apollo Pharmacy,Cetirizine 10mg,Antihistamine,Dr. Reddy's,16.9,26,OTC
+PH006,Borivali Apollo Pharmacy,Montelukast 10mg,Antihistamine,Merck,164.81,29,Rx
+PH006,Borivali Apollo Pharmacy,Metformin 500mg,Antidiabetic,Sun Pharma,21.23,110,Rx
+PH006,Borivali Apollo Pharmacy,Glimepiride 2mg,Antidiabetic,Novartis,35.81,196,Rx
+PH006,Borivali Apollo Pharmacy,Insulin Glargine,Antidiabetic,Sanofi,430.9,47,Rx
+PH006,Borivali Apollo Pharmacy,Amlodipine 5mg,Cardiovascular,Pfizer,24.25,34,Rx
+PH006,Borivali Apollo Pharmacy,Atorvastatin 10mg,Cardiovascular,Dr. Reddy's,43.69,16,Rx
+PH006,Borivali Apollo Pharmacy,Losartan 50mg,Cardiovascular,Cipla,36.76,157,Rx
+PH006,Borivali Apollo Pharmacy,Omeprazole 20mg,Gastrointestinal,Sun Pharma,20.49,116,OTC
+PH006,Borivali Apollo Pharmacy,Pantoprazole 40mg,Gastrointestinal,Cipla,26.9,123,Rx
+PH006,Borivali Apollo Pharmacy,Ranitidine 150mg,Gastrointestinal,GSK,12.65,23,OTC
+PH006,Borivali Apollo Pharmacy,Gabapentin 300mg,Neurological,Pfizer,128.73,45,Rx
+PH006,Borivali Apollo Pharmacy,Sertraline 50mg,Neurological,Zydus,68.5,98,Rx
+PH006,Borivali Apollo Pharmacy,Levothyroxine 50mcg,Hormonal,Abbott,32.06,115,Rx
+PH006,Borivali Apollo Pharmacy,Albuterol Inhaler,Respiratory,Teva,214.19,212,Rx
+PH006,Borivali Apollo Pharmacy,Vitamin D3 60K,Supplement,Mankind,30.33,160,OTC
+PH006,Borivali Apollo Pharmacy,Vitamin C 500mg,Supplement,HealthVit,24.48,127,OTC
+PH006,Borivali Apollo Pharmacy,Multivitamin Tablets,Supplement,Himalaya,94.35,233,OTC
+PH006,Borivali Apollo Pharmacy,ORS Sachets,Electrolyte,FDC,9.07,57,OTC
+PH006,Borivali Apollo Pharmacy,Calamine Lotion,Personal Care,Piramal,73.61,173,OTC
+PH007,Thane City Chemist,Paracetamol 500mg,Analgesic,Cipla,11.09,31,OTC
+PH007,Thane City Chemist,Ibuprofen 400mg,Analgesic,Sun Pharma,19.22,150,OTC
+PH007,Thane City Chemist,Aspirin 75mg,Analgesic,Bayer,9.35,154,OTC
+PH007,Thane City Chemist,Diclofenac 50mg,Analgesic,Novartis,21.42,217,Rx
+PH007,Thane City Chemist,Azithromycin 500mg,Antibiotic,Pfizer,92.24,160,Rx
+PH007,Thane City Chemist,Ciprofloxacin 500mg,Antibiotic,Cipla,35.5,245,Rx
+PH007,Thane City Chemist,Doxycycline 100mg,Antibiotic,Sun Pharma,29.7,220,Rx
+PH007,Thane City Chemist,Cetirizine 10mg,Antihistamine,Dr. Reddy's,14.61,25,OTC
+PH007,Thane City Chemist,Montelukast 10mg,Antihistamine,Merck,165.38,152,Rx
+PH007,Thane City Chemist,Loratadine 10mg,Antihistamine,Cipla,29.48,59,OTC
+PH007,Thane City Chemist,Metformin 500mg,Antidiabetic,Sun Pharma,20.56,56,Rx
+PH007,Thane City Chemist,Glimepiride 2mg,Antidiabetic,Novartis,36.99,19,Rx
+PH007,Thane City Chemist,Insulin Glargine,Antidiabetic,Sanofi,478.12,237,Rx
+PH007,Thane City Chemist,Amlodipine 5mg,Cardiovascular,Pfizer,27.47,203,Rx
+PH007,Thane City Chemist,Atorvastatin 10mg,Cardiovascular,Dr. Reddy's,44.87,142,Rx
+PH007,Thane City Chemist,Losartan 50mg,Cardiovascular,Cipla,31.8,65,Rx
+PH007,Thane City Chemist,Omeprazole 20mg,Gastrointestinal,Sun Pharma,18.17,190,OTC
+PH007,Thane City Chemist,Pantoprazole 40mg,Gastrointestinal,Cipla,21.82,152,Rx
+PH007,Thane City Chemist,Ranitidine 150mg,Gastrointestinal,GSK,13.14,189,OTC
+PH007,Thane City Chemist,Gabapentin 300mg,Neurological,Pfizer,127.28,57,Rx
+PH007,Thane City Chemist,Levothyroxine 50mcg,Hormonal,Abbott,31.22,48,Rx
+PH007,Thane City Chemist,Albuterol Inhaler,Respiratory,Teva,200.05,69,Rx
+PH007,Thane City Chemist,Salbutamol Syrup,Respiratory,Cipla,53.67,234,OTC
+PH007,Thane City Chemist,Vitamin D3 60K,Supplement,Mankind,29.82,224,OTC
+PH007,Thane City Chemist,Vitamin C 500mg,Supplement,HealthVit,27.67,59,OTC
+PH007,Thane City Chemist,ORS Sachets,Electrolyte,FDC,7.63,4,OTC
+PH007,Thane City Chemist,Calamine Lotion,Personal Care,Piramal,65.93,5,OTC
+PH008,Goregaon Apollo Pharmacy,Paracetamol 500mg,Analgesic,Cipla,10.96,115,OTC
+PH008,Goregaon Apollo Pharmacy,Ibuprofen 400mg,Analgesic,Sun Pharma,18.05,98,OTC
+PH008,Goregaon Apollo Pharmacy,Diclofenac 50mg,Analgesic,Novartis,23.31,51,Rx
+PH008,Goregaon Apollo Pharmacy,Amoxicillin 500mg,Antibiotic,GSK,41.99,113,Rx
+PH008,Goregaon Apollo Pharmacy,Azithromycin 500mg,Antibiotic,Pfizer,87.47,157,Rx
+PH008,Goregaon Apollo Pharmacy,Ciprofloxacin 500mg,Antibiotic,Cipla,34.59,119,Rx
+PH008,Goregaon Apollo Pharmacy,Doxycycline 100mg,Antibiotic,Sun Pharma,29.03,91,Rx
+PH008,Goregaon Apollo Pharmacy,Cetirizine 10mg,Antihistamine,Dr. Reddy's,16.29,89,OTC
+PH008,Goregaon Apollo Pharmacy,Montelukast 10mg,Antihistamine,Merck,135.95,116,Rx
+PH008,Goregaon Apollo Pharmacy,Loratadine 10mg,Antihistamine,Cipla,25.77,126,OTC
+PH008,Goregaon Apollo Pharmacy,Metformin 500mg,Antidiabetic,Sun Pharma,21.48,244,Rx
+PH008,Goregaon Apollo Pharmacy,Glimepiride 2mg,Antidiabetic,Novartis,32.01,121,Rx
+PH008,Goregaon Apollo Pharmacy,Insulin Glargine,Antidiabetic,Sanofi,422.6,33,Rx
+PH008,Goregaon Apollo Pharmacy,Amlodipine 5mg,Cardiovascular,Pfizer,24.0,117,Rx
+PH008,Goregaon Apollo Pharmacy,Atorvastatin 10mg,Cardiovascular,Dr. Reddy's,43.15,231,Rx
+PH008,Goregaon Apollo Pharmacy,Losartan 50mg,Cardiovascular,Cipla,36.28,128,Rx
+PH008,Goregaon Apollo Pharmacy,Omeprazole 20mg,Gastrointestinal,Sun Pharma,20.5,230,OTC
+PH008,Goregaon Apollo Pharmacy,Pantoprazole 40mg,Gastrointestinal,Cipla,25.54,68,Rx
+PH008,Goregaon Apollo Pharmacy,Gabapentin 300mg,Neurological,Pfizer,137.93,246,Rx
+PH008,Goregaon Apollo Pharmacy,Sertraline 50mg,Neurological,Zydus,54.72,153,Rx
+PH008,Goregaon Apollo Pharmacy,Levothyroxine 50mcg,Hormonal,Abbott,27.69,228,Rx
+PH008,Goregaon Apollo Pharmacy,Salbutamol Syrup,Respiratory,Cipla,51.15,28,OTC
+PH008,Goregaon Apollo Pharmacy,Vitamin D3 60K,Supplement,Mankind,29.73,68,OTC
+PH008,Goregaon Apollo Pharmacy,Vitamin C 500mg,Supplement,HealthVit,23.09,93,OTC
+PH008,Goregaon Apollo Pharmacy,Multivitamin Tablets,Supplement,Himalaya,105.82,243,OTC
+PH008,Goregaon Apollo Pharmacy,ORS Sachets,Electrolyte,FDC,7.55,143,OTC
+PH008,Goregaon Apollo Pharmacy,Calamine Lotion,Personal Care,Piramal,60.09,175,OTC
+PH009,Malad City Chemist,Paracetamol 500mg,Analgesic,Cipla,13.22,99,OTC
+PH009,Malad City Chemist,Ibuprofen 400mg,Analgesic,Sun Pharma,16.98,221,OTC
+PH009,Malad City Chemist,Aspirin 75mg,Analgesic,Bayer,10.62,249,OTC
+PH009,Malad City Chemist,Diclofenac 50mg,Analgesic,Novartis,23.19,68,Rx
+PH009,Malad City Chemist,Amoxicillin 500mg,Antibiotic,GSK,50.48,179,Rx
+PH009,Malad City Chemist,Azithromycin 500mg,Antibiotic,Pfizer,84.46,249,Rx
+PH009,Malad City Chemist,Doxycycline 100mg,Antibiotic,Sun Pharma,34.0,95,Rx
+PH009,Malad City Chemist,Cetirizine 10mg,Antihistamine,Dr. Reddy's,16.71,68,OTC
+PH009,Malad City Chemist,Montelukast 10mg,Antihistamine,Merck,160.65,15,Rx
+PH009,Malad City Chemist,Loratadine 10mg,Antihistamine,Cipla,25.69,246,OTC
+PH009,Malad City Chemist,Amlodipine 5mg,Cardiovascular,Pfizer,28.4,219,Rx
+PH009,Malad City Chemist,Atorvastatin 10mg,Cardiovascular,Dr. Reddy's,41.86,218,Rx
+PH009,Malad City Chemist,Losartan 50mg,Cardiovascular,Cipla,35.21,139,Rx
+PH009,Malad City Chemist,Omeprazole 20mg,Gastrointestinal,Sun Pharma,17.95,123,OTC
+PH009,Malad City Chemist,Pantoprazole 40mg,Gastrointestinal,Cipla,22.37,188,Rx
+PH009,Malad City Chemist,Ranitidine 150mg,Gastrointestinal,GSK,14.51,100,OTC
+PH009,Malad City Chemist,Gabapentin 300mg,Neurological,Pfizer,138.4,64,Rx
+PH009,Malad City Chemist,Sertraline 50mg,Neurological,Zydus,68.42,73,Rx
+PH009,Malad City Chemist,Levothyroxine 50mcg,Hormonal,Abbott,26.65,28,Rx
+PH009,Malad City Chemist,Albuterol Inhaler,Respiratory,Teva,201.81,94,Rx
+PH009,Malad City Chemist,Vitamin D3 60K,Supplement,Mankind,31.82,242,OTC
+PH009,Malad City Chemist,Vitamin C 500mg,Supplement,HealthVit,26.36,214,OTC
+PH009,Malad City Chemist,ORS Sachets,Electrolyte,FDC,7.34,7,OTC
+PH009,Malad City Chemist,Calamine Lotion,Personal Care,Piramal,64.76,201,OTC
+PH010,Vile Parle Generic Aid,Paracetamol 500mg,Analgesic,Cipla,10.87,161,OTC
+PH010,Vile Parle Generic Aid,Ibuprofen 400mg,Analgesic,Sun Pharma,17.37,134,OTC
+PH010,Vile Parle Generic Aid,Aspirin 75mg,Analgesic,Bayer,9.3,244,OTC
+PH010,Vile Parle Generic Aid,Diclofenac 50mg,Analgesic,Novartis,21.72,74,Rx
+PH010,Vile Parle Generic Aid,Ciprofloxacin 500mg,Antibiotic,Cipla,42.54,163,Rx
+PH010,Vile Parle Generic Aid,Doxycycline 100mg,Antibiotic,Sun Pharma,30.13,248,Rx
+PH010,Vile Parle Generic Aid,Cetirizine 10mg,Antihistamine,Dr. Reddy's,15.55,100,OTC
+PH010,Vile Parle Generic Aid,Montelukast 10mg,Antihistamine,Merck,163.15,191,Rx
+PH010,Vile Parle Generic Aid,Loratadine 10mg,Antihistamine,Cipla,29.23,98,OTC
+PH010,Vile Parle Generic Aid,Insulin Glargine,Antidiabetic,Sanofi,451.42,209,Rx
+PH010,Vile Parle Generic Aid,Amlodipine 5mg,Cardiovascular,Pfizer,24.06,95,Rx
+PH010,Vile Parle Generic Aid,Atorvastatin 10mg,Cardiovascular,Dr. Reddy's,39.41,189,Rx
+PH010,Vile Parle Generic Aid,Losartan 50mg,Cardiovascular,Cipla,33.29,11,Rx
+PH010,Vile Parle Generic Aid,Omeprazole 20mg,Gastrointestinal,Sun Pharma,18.13,12,OTC
+PH010,Vile Parle Generic Aid,Pantoprazole 40mg,Gastrointestinal,Cipla,26.04,98,Rx
+PH010,Vile Parle Generic Aid,Ranitidine 150mg,Gastrointestinal,GSK,12.96,16,OTC
+PH010,Vile Parle Generic Aid,Sertraline 50mg,Neurological,Zydus,62.01,83,Rx
+PH010,Vile Parle Generic Aid,Levothyroxine 50mcg,Hormonal,Abbott,30.99,85,Rx
+PH010,Vile Parle Generic Aid,Albuterol Inhaler,Respiratory,Teva,214.37,18,Rx
+PH010,Vile Parle Generic Aid,Salbutamol Syrup,Respiratory,Cipla,54.85,139,OTC
+PH010,Vile Parle Generic Aid,Vitamin D3 60K,Supplement,Mankind,36.47,146,OTC
+PH010,Vile Parle Generic Aid,Vitamin C 500mg,Supplement,HealthVit,23.07,198,OTC
+PH010,Vile Parle Generic Aid,Multivitamin Tablets,Supplement,Himalaya,108.22,222,OTC
+PH010,Vile Parle Generic Aid,ORS Sachets,Electrolyte,FDC,9.1,82,OTC
+PH010,Vile Parle Generic Aid,Calamine Lotion,Personal Care,Piramal,66.51,143,OTC
+PH011,Kurla MedPlus,Paracetamol 500mg,Analgesic,Cipla,12.15,98,OTC
+PH011,Kurla MedPlus,Aspirin 75mg,Analgesic,Bayer,10.51,179,OTC
+PH011,Kurla MedPlus,Diclofenac 50mg,Analgesic,Novartis,23.5,227,Rx
+PH011,Kurla MedPlus,Amoxicillin 500mg,Antibiotic,GSK,51.14,143,Rx
+PH011,Kurla MedPlus,Azithromycin 500mg,Antibiotic,Pfizer,93.28,108,Rx
+PH011,Kurla MedPlus,Ciprofloxacin 500mg,Antibiotic,Cipla,43.04,185,Rx
+PH011,Kurla MedPlus,Doxycycline 100mg,Antibiotic,Sun Pharma,27.43,222,Rx
+PH011,Kurla MedPlus,Cetirizine 10mg,Antihistamine,Dr. Reddy's,13.71,162,OTC
+PH011,Kurla MedPlus,Montelukast 10mg,Antihistamine,Merck,168.29,234,Rx
+PH011,Kurla MedPlus,Metformin 500mg,Antidiabetic,Sun Pharma,21.53,238,Rx
+PH011,Kurla MedPlus,Glimepiride 2mg,Antidiabetic,Novartis,32.75,73,Rx
+PH011,Kurla MedPlus,Insulin Glargine,Antidiabetic,Sanofi,499.16,144,Rx
+PH011,Kurla MedPlus,Amlodipine 5mg,Cardiovascular,Pfizer,23.13,6,Rx
+PH011,Kurla MedPlus,Atorvastatin 10mg,Cardiovascular,Dr. Reddy's,40.26,167,Rx
+PH011,Kurla MedPlus,Losartan 50mg,Cardiovascular,Cipla,29.38,177,Rx
+PH011,Kurla MedPlus,Omeprazole 20mg,Gastrointestinal,Sun Pharma,20.21,193,OTC
+PH011,Kurla MedPlus,Pantoprazole 40mg,Gastrointestinal,Cipla,22.09,164,Rx
+PH011,Kurla MedPlus,Gabapentin 300mg,Neurological,Pfizer,125.54,135,Rx
+PH011,Kurla MedPlus,Sertraline 50mg,Neurological,Zydus,59.61,64,Rx
+PH011,Kurla MedPlus,Levothyroxine 50mcg,Hormonal,Abbott,31.36,144,Rx
+PH011,Kurla MedPlus,Albuterol Inhaler,Respiratory,Teva,250.1,216,Rx
+PH011,Kurla MedPlus,Salbutamol Syrup,Respiratory,Cipla,57.64,35,OTC
+PH011,Kurla MedPlus,Vitamin D3 60K,Supplement,Mankind,31.81,158,OTC
+PH011,Kurla MedPlus,Vitamin C 500mg,Supplement,HealthVit,25.51,107,OTC
+PH011,Kurla MedPlus,Multivitamin Tablets,Supplement,Himalaya,98.76,90,OTC
+PH011,Kurla MedPlus,ORS Sachets,Electrolyte,FDC,7.7,18,OTC
+PH011,Kurla MedPlus,Calamine Lotion,Personal Care,Piramal,60.31,194,OTC
+PH012,Worli Generic Aid,Ibuprofen 400mg,Analgesic,Sun Pharma,17.34,241,OTC
+PH012,Worli Generic Aid,Aspirin 75mg,Analgesic,Bayer,10.17,57,OTC
+PH012,Worli Generic Aid,Diclofenac 50mg,Analgesic,Novartis,23.88,199,Rx
+PH012,Worli Generic Aid,Amoxicillin 500mg,Antibiotic,GSK,41.82,104,Rx
+PH012,Worli Generic Aid,Ciprofloxacin 500mg,Antibiotic,Cipla,41.27,130,Rx
+PH012,Worli Generic Aid,Doxycycline 100mg,Antibiotic,Sun Pharma,31.38,189,Rx
+PH012,Worli Generic Aid,Cetirizine 10mg,Antihistamine,Dr. Reddy's,15.0,112,OTC
+PH012,Worli Generic Aid,Montelukast 10mg,Antihistamine,Merck,138.11,160,Rx
+PH012,Worli Generic Aid,Loratadine 10mg,Antihistamine,Cipla,26.77,133,OTC
+PH012,Worli Generic Aid,Metformin 500mg,Antidiabetic,Sun Pharma,22.01,172,Rx
+PH012,Worli Generic Aid,Glimepiride 2mg,Antidiabetic,Novartis,39.99,60,Rx
+PH012,Worli Generic Aid,Insulin Glargine,Antidiabetic,Sanofi,441.3,79,Rx
+PH012,Worli Generic Aid,Amlodipine 5mg,Cardiovascular,Pfizer,25.8,202,Rx
+PH012,Worli Generic Aid,Losartan 50mg,Cardiovascular,Cipla,36.15,163,Rx
+PH012,Worli Generic Aid,Omeprazole 20mg,Gastrointestinal,Sun Pharma,18.69,19,OTC
+PH012,Worli Generic Aid,Pantoprazole 40mg,Gastrointestinal,Cipla,22.05,46,Rx
+PH012,Worli Generic Aid,Ranitidine 150mg,Gastrointestinal,GSK,14.8,13,OTC
+PH012,Worli Generic Aid,Gabapentin 300mg,Neurological,Pfizer,127.54,0,Rx
+PH012,Worli Generic Aid,Sertraline 50mg,Neurological,Zydus,63.41,117,Rx
+PH012,Worli Generic Aid,Albuterol Inhaler,Respiratory,Teva,219.13,214,Rx
+PH012,Worli Generic Aid,Salbutamol Syrup,Respiratory,Cipla,50.12,11,OTC
+PH012,Worli Generic Aid,Vitamin D3 60K,Supplement,Mankind,36.47,15,OTC
+PH012,Worli Generic Aid,Vitamin C 500mg,Supplement,HealthVit,28.06,203,OTC
+PH012,Worli Generic Aid,Multivitamin Tablets,Supplement,Himalaya,88.04,116,OTC
+PH012,Worli Generic Aid,ORS Sachets,Electrolyte,FDC,7.75,91,OTC
+PH012,Worli Generic Aid,Calamine Lotion,Personal Care,Piramal,69.01,135,OTC

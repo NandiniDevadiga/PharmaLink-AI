@@ -2,8 +2,8 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { BASE_URL } from "../api/client";
 
 const AuthContext = createContext(null);
-
-
+//nandini
+//
 const STORAGE_KEY = "pharmalink_session"; // kept in memory + sessionStorage-like state object
 
 export function AuthProvider({ children }) {

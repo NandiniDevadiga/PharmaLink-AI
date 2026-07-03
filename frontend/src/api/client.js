@@ -88,5 +88,11 @@ export const api = {
         pharmacy_name: pharmacyName,
       }),
     }),
+  uploadStock: (token, data) =>
+    request(`/dashboard/bulk-upload-stock`, {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify(data),
+    }),
 };
 

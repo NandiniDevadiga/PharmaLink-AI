@@ -1125,6 +1125,61 @@ def unmet_demand(current_user: TokenData = Depends(get_current_user)):
     return {"unmet_demands": result}
 
 
+class StockUploadItem(BaseModel):
+    drug_name: str
+    category: str
+    manufacturer: str
+    unit_price_inr: float
+    stock_qty: int
+    otc_or_rx: str  # 'OTC' or 'Rx'
+
+
+@app.post("/dashboard/bulk-upload-stock")
+def bulk_upload_stock(payload: List[StockUploadItem], current_user: TokenData = Depends(get_current_user)):
+    """
+    Overwrites the inventory stock list for the logged-in pharmacy manager's store.
+    Validates numbers and constraints before updating MongoDB.
+    """
+    if current_user.role != "pharmacy":
+        raise HTTPException(status_code=403, detail="Only pharmacy branch managers can upload stock data.")
+        
+    pharm_id = current_user.pharmacy_id
+    pharm_name = current_user.pharmacy_name
+    
+    new_stock = []
+    for index, item in enumerate(payload):
+        dname = item.drug_name.strip()
+        if not dname:
+            raise HTTPException(status_code=400, detail=f"Row {index+1}: Drug Name cannot be empty.")
+        if item.unit_price_inr < 0:
+            raise HTTPException(status_code=400, detail=f"Row {index+1}: Unit Price cannot be negative.")
+        if item.stock_qty < 0:
+            raise HTTPException(status_code=400, detail=f"Row {index+1}: Stock Quantity cannot be negative.")
+        if item.otc_or_rx not in ("OTC", "Rx"):
+            raise HTTPException(status_code=400, detail=f"Row {index+1}: otc_or_rx must be 'OTC' or 'Rx'.")
+            
+        new_stock.append({
+            "pharmacy_id": pharm_id,
+            "pharmacy_name": pharm_name,
+            "drug_name": dname,
+            "category": item.category.strip() or "Other",
+            "manufacturer": item.manufacturer.strip() or "Unknown",
+            "unit_price_inr": round(item.unit_price_inr, 2),
+            "stock_qty": item.stock_qty,
+            "otc_or_rx": item.otc_or_rx
+        })
+        
+    db.stock.delete_many({"pharmacy_id": pharm_id})
+    
+    if new_stock:
+        db.stock.insert_many(new_stock)
+        
+    global df_stock
+    df_stock = get_dataframe_from_mongo("stock")
+    
+    return {"message": f"Successfully updated stock list with {len(new_stock)} items for branch '{pharm_name}'."}
+
+
 @app.get("/")
 def root():
     return {"message": "Pharmalink AI API is running.", "docs": "/docs"}

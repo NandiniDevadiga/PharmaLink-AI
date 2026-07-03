@@ -43,6 +43,14 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Bulk upload stock modal states
+  const [showUploadStockModal, setShowUploadStockModal] = useState(false);
+  const [stockPreviewData, setStockPreviewData] = useState(null);
+  const [stockIsDragging, setStockIsDragging] = useState(false);
+  const [stockError, setStockError] = useState(null);
+  const [stockSubmitting, setStockSubmitting] = useState(false);
+
+
   async function loadForecast(months) {
     const f = await api.getForecast(token, months);
     setForecast(f);
@@ -81,7 +89,166 @@ export default function Dashboard() {
     loadAll();
   }, [token, isAdmin, logout]);
 
+  function handleStockCSVParse(text) {
+    try {
+      setStockError(null);
+      const lines = text.split(/\r?\n/);
+      if (lines.length === 0 || !lines[0].trim()) {
+        throw new Error("File is empty.");
+      }
+      
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const requiredHeaders = ["drug_name", "category", "manufacturer", "unit_price_inr", "stock_qty", "otc_or_rx"];
+      const missing = requiredHeaders.filter(req => !headers.includes(req));
+      if (missing.length > 0) {
+        throw new Error(`Invalid stock template. Missing columns: ${missing.join(", ")}`);
+      }
+      
+      const parsed = [];
+      const splitFn = (line) => {
+        const raw = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        return raw.map(c => {
+          let cleaned = c.trim();
+          if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+            cleaned = cleaned.substring(1, cleaned.length - 1);
+          }
+          return cleaned;
+        });
+      };
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const cleanCols = splitFn(line);
+        const stockObj = {};
+        headers.forEach((h, idx) => {
+          let val = cleanCols[idx] || "";
+          if (h === "unit_price_inr") {
+            const parsedVal = parseFloat(val);
+            if (isNaN(parsedVal) || parsedVal < 0) {
+              throw new Error(`Row ${i}: Unit Price must be a positive number. Got "${val}"`);
+            }
+            stockObj[h] = parsedVal;
+          } else if (h === "stock_qty") {
+            const parsedVal = parseInt(val, 10);
+            if (isNaN(parsedVal) || parsedVal < 0) {
+              throw new Error(`Row ${i}: Stock Quantity must be a positive integer. Got "${val}"`);
+            }
+            stockObj[h] = parsedVal;
+          } else if (h === "otc_or_rx") {
+            const parsedVal = val.trim();
+            if (parsedVal !== "OTC" && parsedVal !== "Rx") {
+              throw new Error(`Row ${i}: otc_or_rx must be 'OTC' or 'Rx'. Got "${val}"`);
+            }
+            stockObj[h] = parsedVal;
+          } else {
+            stockObj[h] = val;
+          }
+        });
+        parsed.push(stockObj);
+      }
+      
+      if (parsed.length === 0) {
+        throw new Error("No data rows found in the CSV.");
+      }
+      
+      setStockPreviewData(parsed);
+    } catch (err) {
+      setStockError(err.message || "Failed to parse CSV file.");
+      setStockPreviewData(null);
+    }
+  }
+
+  function handleStockFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    readStockFile(file);
+  }
+
+  function readStockFile(file) {
+    if (file.type !== "text/csv" && !file.name.endsWith(".csv")) {
+      setStockError("Please upload a valid CSV file.");
+      setStockPreviewData(null);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      handleStockCSVParse(evt.target.result);
+    };
+    reader.onerror = () => {
+      setStockError("Could not read file.");
+      setStockPreviewData(null);
+    };
+    reader.readAsText(file);
+  }
+
+  function handleStockDragOver(e) {
+    e.preventDefault();
+    setStockIsDragging(true);
+  }
+
+  function handleStockDragLeave() {
+    setStockIsDragging(false);
+  }
+
+  function handleStockDrop(e) {
+    e.preventDefault();
+    setStockIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      readStockFile(file);
+    }
+  }
+
+  function downloadStockTemplate() {
+    const headers = "drug_name,category,manufacturer,unit_price_inr,stock_qty,otc_or_rx\n";
+    const sampleRow = "Crocin 650mg,Analgesic,GlaxoSmithKline,15.5,120,OTC\nMetformin 500mg,Antidiabetic,Abbott,8.25,90,Rx\n";
+    const blob = new Blob([headers + sampleRow], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.setAttribute("href", url);
+    a.setAttribute("download", "pharmalink_stock_template.csv");
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+
+  async function handleStockSubmit() {
+    if (!stockPreviewData || stockPreviewData.length === 0) return;
+    setStockError(null);
+    setStockSubmitting(true);
+    try {
+      const response = await api.uploadStock(token, stockPreviewData);
+      
+      const calls = [
+        api.getDashboardSummary(token),
+        api.getSalesTrend(token, "monthly"),
+        api.getQuarterlySales(token),
+        api.getCategoryBreakdown(token),
+        api.getTopDrugs(token, 10),
+        api.getSeasonalHeatmap(token),
+        api.getLowStock(token, 20),
+        api.getOtcVsRx(token),
+        api.getForecast(token, forecastMonths),
+        api.getUnmetDemand(token),
+      ];
+      const [s, t, q, c, td, seas, ls, or_, fc, ud] = await Promise.all(calls);
+      setSummary(s); setTrend(t); setQuarterly(q); setCategories(c);
+      setTopDrugs(td); setSeasonal(seas); setLowStock(ls); setOtcRx(or_);
+      setForecast(fc); setUnmetDemand(ud);
+
+      setShowUploadStockModal(false);
+      setStockPreviewData(null);
+      alert(response.message || "Successfully uploaded stock!");
+    } catch (err) {
+      setStockError(err.message || "Stock upload failed.");
+    } finally {
+      setStockSubmitting(false);
+    }
+  }
+
   // Build seasonal chart data: pivot to {month, Cat1, Cat2, ...}
+
   const seasonalPivot = (() => {
     const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     const pivot = months.map(m => ({ month: m }));
@@ -111,8 +278,19 @@ export default function Dashboard() {
         <div className="dash-account">
           <span className="account-pill">{isAdmin ? "Head Office" : session.pharmacy_id}</span>
           {isAdmin && <Link to="/admin" className="btn-admin-link">Manage Accounts</Link>}
+          {!isAdmin && (
+            <button
+              type="button"
+              className="btn-admin-link"
+              onClick={() => { setShowUploadStockModal(true); setStockPreviewData(null); setStockError(null); }}
+              style={{ display: "flex", alignItems: "center", gap: "6px" }}
+            >
+              📦 Upload Stock CSV
+            </button>
+          )}
           <button className="btn-logout" onClick={logout}>Log out</button>
         </div>
+
       </div>
 
       {/* ── KPI CARDS ── */}
@@ -365,6 +543,112 @@ export default function Dashboard() {
         )}
       </div>
 
+      {showUploadStockModal && (
+        <div className="modal-overlay" onClick={() => { if (!stockSubmitting) setShowUploadStockModal(false); }}>
+          <div className="modal-card bulk-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-row">
+              <h3>Upload Branch Inventory Stock</h3>
+              <button className="btn-close-x" onClick={() => setShowUploadStockModal(false)}>&times;</button>
+            </div>
+            
+            <p className="modal-sub">
+              Upload your branch's complete medicine stock list. This will replace your current stock data in the database.
+            </p>
+
+            {stockError && <div className="alert-error" style={{ marginTop: "12px", marginBottom: "12px", background: "#FBEAE8", color: "var(--color-danger)", padding: "10px 14px", borderRadius: "var(--radius-md)", fontSize: "0.85rem" }}>⚠️ {stockError}</div>}
+
+            {!stockPreviewData ? (
+              <div className="upload-modal-content" style={{ marginTop: "18px" }}>
+                <button type="button" className="btn-template-download" onClick={downloadStockTemplate}>
+                  📥 Download Stock CSV Template
+                </button>
+                
+                <div
+                  className={`dropzone ${stockIsDragging ? "dragging" : ""}`}
+                  onDragOver={handleStockDragOver}
+                  onDragLeave={handleStockDragLeave}
+                  onDrop={handleStockDrop}
+                >
+                  <span className="dropzone-icon">📦</span>
+                  <p className="dropzone-text">Drag and drop your stock CSV file here</p>
+                  <span className="dropzone-or">or</span>
+                  <label htmlFor="stock-file-input" className="btn-file-select">
+                    Choose File
+                  </label>
+                  <input
+                    type="file"
+                    id="stock-file-input"
+                    accept=".csv"
+                    onChange={handleStockFileChange}
+                    hidden
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="preview-modal-content" style={{ marginTop: "18px" }}>
+                <div className="preview-table-header">
+                  <h4>Previewing {stockPreviewData.length} Medicine Item{stockPreviewData.length !== 1 ? "s" : ""}</h4>
+                  <button className="btn-link" onClick={() => setStockPreviewData(null)} style={{ fontSize: "0.8rem", color: "var(--color-primary)", background: "none", border: "none", textDecoration: "underline", padding: "0", cursor: "pointer" }}>
+                    Choose a different file
+                  </button>
+                </div>
+                
+                <div className="preview-table-wrap">
+                  <table className="preview-table">
+                    <thead>
+                      <tr>
+                        <th>Drug Name</th>
+                        <th>Category</th>
+                        <th>Manufacturer</th>
+                        <th>Unit Price</th>
+                        <th>Quantity</th>
+                        <th>Type</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stockPreviewData.map((row, idx) => (
+                        <tr key={idx}>
+                          <td><strong>{row.drug_name}</strong></td>
+                          <td><span className="cat-tag">{row.category}</span></td>
+                          <td>{row.manufacturer}</td>
+                          <td>₹{row.unit_price_inr}</td>
+                          <td style={{ fontWeight: "700" }}>{row.stock_qty}</td>
+                          <td>
+                            <span className={`priority-pill ${row.otc_or_rx === 'OTC' ? 'priority-ok' : 'priority-medium'}`}>
+                              {row.otc_or_rx}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="modal-actions" style={{ marginTop: "20px", display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    disabled={stockSubmitting}
+                    onClick={() => { setStockPreviewData(null); setShowUploadStockModal(false); }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-confirm"
+                    disabled={stockSubmitting}
+                    onClick={handleStockSubmit}
+                  >
+                    {stockSubmitting ? "Uploading..." : "Confirm & Replace Stock"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+
       <style>{`
         .dashboard-page { max-width: 1300px; margin: 0 auto; padding: 40px 32px 80px; }
         .dash-loading, .dash-error { padding: 80px; text-align: center; color: var(--color-text-muted); }
@@ -422,6 +706,167 @@ export default function Dashboard() {
 
         .search-count { background: var(--color-primary); color: white; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
         .elsewhere-entry { font-size: 0.78rem; color: var(--color-text-muted); margin-bottom: 3px; }
+
+        /* Modal Overlay */
+        .modal-overlay {
+          position: fixed; inset: 0; background: rgba(28,40,38,0.45);
+          display: flex; align-items: center; justify-content: center;
+          z-index: 100; padding: 20px;
+        }
+        .modal-card {
+          background: var(--color-surface);
+          border-radius: var(--radius-lg);
+          padding: 28px;
+          max-width: 380px;
+          width: 100%;
+        }
+        .modal-card h3 { font-size: 1.05rem; font-family: var(--font-body); }
+        .modal-sub { color: var(--color-text-muted); font-size: 0.85rem; margin-top: 4px; }
+        
+        .bulk-modal-card {
+          max-width: 720px;
+          width: 100%;
+        }
+        .modal-header-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .btn-close-x {
+          background: none;
+          border: none;
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: var(--color-text-muted);
+          cursor: pointer;
+          padding: 0;
+          line-height: 1;
+        }
+        .btn-close-x:hover {
+          color: var(--color-danger);
+        }
+        .btn-template-download {
+          background: var(--color-accent-soft);
+          color: #966319;
+          border: 1.5px solid #F0D9AE;
+          padding: 8px 14px;
+          border-radius: var(--radius-md);
+          font-weight: 700;
+          font-size: 0.82rem;
+          margin-bottom: 16px;
+          display: inline-block;
+        }
+        .btn-template-download:hover {
+          background: var(--color-accent);
+          color: #3A2700;
+          border-color: var(--color-accent);
+        }
+        .dropzone {
+          border: 2px dashed var(--color-border);
+          border-radius: var(--radius-lg);
+          padding: 32px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          background: var(--color-bg);
+          transition: all 0.15s ease-in-out;
+        }
+        .dropzone.dragging {
+          border-color: var(--color-primary-light);
+          background: #E8F4F1;
+        }
+        .dropzone-icon {
+          font-size: 2.2rem;
+          margin-bottom: 8px;
+        }
+        .dropzone-text {
+          font-size: 0.92rem;
+          font-weight: 500;
+          color: var(--color-text-muted);
+          margin-bottom: 4px;
+        }
+        .dropzone-or {
+          font-size: 0.78rem;
+          color: var(--color-text-muted);
+          text-transform: uppercase;
+          margin: 8px 0;
+          letter-spacing: 0.05em;
+        }
+        .btn-file-select {
+          background: var(--color-surface);
+          border: 1.5px solid var(--color-border);
+          padding: 8px 18px;
+          border-radius: var(--radius-md);
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: var(--color-text);
+          cursor: pointer;
+          transition: border-color 0.15s;
+        }
+        .btn-file-select:hover {
+          border-color: var(--color-primary-light);
+          color: var(--color-primary);
+        }
+        .preview-table-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+        }
+        .preview-table-header h4 {
+          font-size: 0.95rem;
+          font-family: var(--font-body);
+          color: var(--color-text);
+        }
+        .preview-table-wrap {
+          max-height: 280px;
+          overflow-y: auto;
+          border: 1px solid var(--color-border);
+          border-radius: var(--radius-md);
+        }
+        .preview-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 0.8rem;
+        }
+        .preview-table th {
+          background: var(--color-bg);
+          padding: 8px 12px;
+          font-size: 0.7rem;
+          color: var(--color-text-muted);
+          text-transform: uppercase;
+          border-bottom: 1px solid var(--color-border);
+          position: sticky;
+          top: 0;
+          z-index: 5;
+        }
+        .preview-table td {
+          padding: 8px 12px;
+          border-bottom: 1px solid var(--color-border);
+        }
+        .preview-table tr:last-child td {
+          border-bottom: none;
+        }
+        .preview-table code {
+          background: rgba(0,0,0,0.04);
+          padding: 2px 4px;
+          border-radius: 4px;
+          font-family: monospace;
+        }
+        .btn-cancel {
+          background: transparent; border: 1.5px solid var(--color-border);
+          padding: 10px 16px; border-radius: var(--radius-md);
+          font-weight: 600; font-size: 0.85rem; color: var(--color-text-muted);
+          cursor: pointer;
+        }
+        .btn-confirm {
+          background: var(--color-primary); color: white; border: none;
+          padding: 10px 16px; border-radius: var(--radius-md);
+          font-weight: 700; font-size: 0.85rem;
+          cursor: pointer;
+        }
+        .btn-confirm:hover { background: var(--color-primary-light); }
+        .btn-confirm:disabled { opacity: 0.6; }
       `}</style>
     </div>
   );

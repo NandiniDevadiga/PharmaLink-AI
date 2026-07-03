@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { BASE_URL } from "../api/client";
 
 const AuthContext = createContext(null);
+
 
 const STORAGE_KEY = "pharmalink_session"; // kept in memory + sessionStorage-like state object
 
@@ -15,7 +17,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function login(username, password) {
-    const res = await fetch("http://127.0.0.1:8000/auth/login", {
+    const res = await fetch(`${BASE_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,

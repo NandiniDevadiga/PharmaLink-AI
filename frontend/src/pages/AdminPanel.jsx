@@ -22,6 +22,14 @@ export default function AdminPanel() {
   const [newPassword, setNewPassword] = useState("");
   const [resetSubmitting, setResetSubmitting] = useState(false);
 
+  // Bulk upload modal states
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [bulkError, setBulkError] = useState(null);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+
+
   async function loadUsers() {
     setLoading(true);
     try {
@@ -70,6 +78,125 @@ export default function AdminPanel() {
     }
   }
 
+  function handleCSVParse(text) {
+    try {
+      setBulkError(null);
+      const lines = text.split(/\r?\n/);
+      if (lines.length === 0 || !lines[0].trim()) {
+        throw new Error("File is empty.");
+      }
+      
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const requiredHeaders = ["username", "role", "pharmacy_name", "password"];
+      const missing = requiredHeaders.filter(req => !headers.includes(req));
+      if (missing.length > 0) {
+        throw new Error(`Invalid CSV template. Missing columns: ${missing.join(", ")}`);
+      }
+      
+      const parsed = [];
+      const splitRegex = /,(?=(?:(?:[^"]*"){2})*[^"]*$)/;
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const rawCols = line.split(splitRegex);
+        const cleanCols = rawCols.map(c => {
+          let cleaned = c.trim();
+          if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+            cleaned = cleaned.substring(1, cleaned.length - 1);
+          }
+          return cleaned;
+        });
+
+        const userObj = {};
+        headers.forEach((h, idx) => {
+          userObj[h] = cleanCols[idx] || "";
+        });
+        parsed.push(userObj);
+      }
+      
+      if (parsed.length === 0) {
+        throw new Error("No data rows found in the CSV.");
+      }
+      
+      setPreviewData(parsed);
+    } catch (err) {
+      setBulkError(err.message || "Failed to parse CSV file.");
+      setPreviewData(null);
+    }
+  }
+
+  function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    readFile(file);
+  }
+
+  function readFile(file) {
+    if (file.type !== "text/csv" && !file.name.endsWith(".csv")) {
+      setBulkError("Please upload a valid CSV file.");
+      setPreviewData(null);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      handleCSVParse(evt.target.result);
+    };
+    reader.onerror = () => {
+      setBulkError("Could not read file.");
+      setPreviewData(null);
+    };
+    reader.readAsText(file);
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave() {
+    setIsDragging(false);
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      readFile(file);
+    }
+  }
+
+  function downloadCSVTemplate() {
+    const headers = "username,role,pharmacy_id,pharmacy_name,password\n";
+    const sampleRow = "ph013,pharmacy,PH013,Andheri East Chemist,pharma123\n";
+    const blob = new Blob([headers + sampleRow], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.setAttribute("href", url);
+    a.setAttribute("download", "pharmalink_users_template.csv");
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+
+  async function handleBulkSubmit() {
+    if (!previewData || previewData.length === 0) return;
+    setBulkError(null);
+    setBulkSubmitting(true);
+    try {
+      const response = await api.bulkUpload(token, previewData);
+      setActionMsg(response.message || "Successfully imported accounts.");
+      setShowBulkModal(false);
+      setPreviewData(null);
+      loadUsers();
+    } catch (err) {
+      setBulkError(err.message || "Bulk upload failed.");
+    } finally {
+      setBulkSubmitting(false);
+    }
+  }
+
   if (loading) return <div className="admin-loading">Loading accounts…</div>;
   if (error) return <div className="admin-error">{error}</div>;
 
@@ -80,7 +207,18 @@ export default function AdminPanel() {
           <h1>Account Management</h1>
           <p className="admin-sub">Head office controls for all pharmacy + admin logins</p>
         </div>
+        <div>
+          <button
+            type="button"
+            className="btn-confirm"
+            style={{ display: "flex", alignItems: "center", gap: "6px" }}
+            onClick={() => { setShowBulkModal(true); setPreviewData(null); setBulkError(null); }}
+          >
+            📂 Bulk Upload Accounts
+          </button>
+        </div>
       </div>
+
 
       {actionMsg && <div className="admin-toast">{actionMsg}</div>}
 
@@ -160,6 +298,110 @@ export default function AdminPanel() {
           </div>
         </div>
       )}
+
+      {showBulkModal && (
+        <div className="modal-overlay" onClick={() => { if (!bulkSubmitting) setShowBulkModal(false); }}>
+          <div className="modal-card bulk-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-row">
+              <h3>Bulk Upload Accounts</h3>
+              <button className="btn-close-x" onClick={() => setShowBulkModal(false)}>&times;</button>
+            </div>
+            
+            <p className="modal-sub">
+              Upload multiple pharmacy branch or admin accounts using a CSV file.
+            </p>
+
+            {bulkError && <div className="alert-error" style={{ marginTop: "12px", marginBottom: "12px", background: "#FBEAE8", color: "var(--color-danger)", padding: "10px 14px", borderRadius: "var(--radius-md)", fontSize: "0.85rem" }}>⚠️ {bulkError}</div>}
+
+            {!previewData ? (
+              <div className="upload-modal-content" style={{ marginTop: "18px" }}>
+                <button type="button" className="btn-template-download" onClick={downloadCSVTemplate}>
+                  📥 Download CSV Template
+                </button>
+                
+                <div
+                  className={`dropzone ${isDragging ? "dragging" : ""}`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <span className="dropzone-icon">📋</span>
+                  <p className="dropzone-text">Drag and drop your template CSV here</p>
+                  <span className="dropzone-or">or</span>
+                  <label htmlFor="csv-file-input" className="btn-file-select">
+                    Choose File
+                  </label>
+                  <input
+                    type="file"
+                    id="csv-file-input"
+                    accept=".csv"
+                    onChange={handleFileChange}
+                    hidden
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="preview-modal-content" style={{ marginTop: "18px" }}>
+                <div className="preview-table-header">
+                  <h4>Previewing {previewData.length} Account{previewData.length !== 1 ? "s" : ""}</h4>
+                  <button className="btn-link" onClick={() => setPreviewData(null)} style={{ fontSize: "0.8rem", color: "var(--color-primary)", background: "none", border: "none", textDecoration: "underline", padding: "0", cursor: "pointer" }}>
+                    Choose a different file
+                  </button>
+                </div>
+                
+                <div className="preview-table-wrap">
+                  <table className="preview-table">
+                    <thead>
+                      <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Pharmacy ID</th>
+                        <th>Pharmacy Name</th>
+                        <th>Password</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewData.map((row, idx) => (
+                        <tr key={idx}>
+                          <td><strong>{row.username}</strong></td>
+                          <td>
+                            <span className={`role-pill ${row.role === 'admin' ? 'role-admin' : 'role-pharmacy'}`}>
+                              {row.role}
+                            </span>
+                          </td>
+                          <td>{row.pharmacy_id || "—"}</td>
+                          <td>{row.pharmacy_name || "Head Office"}</td>
+                          <td><code>{row.password}</code></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="modal-actions" style={{ marginTop: "20px" }}>
+                  <button
+                    type="button"
+                    className="btn-cancel"
+                    disabled={bulkSubmitting}
+                    onClick={() => { setPreviewData(null); setShowBulkModal(false); }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-confirm"
+                    disabled={bulkSubmitting}
+                    onClick={handleBulkSubmit}
+                  >
+                    {bulkSubmitting ? "Importing..." : "Confirm & Import"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
 
       <style>{`
         .admin-page { max-width: 1300px; margin: 0 auto; padding: 40px 32px 80px; }
@@ -262,6 +504,137 @@ export default function AdminPanel() {
         }
         .btn-confirm:hover { background: var(--color-primary-light); }
         .btn-confirm:disabled { opacity: 0.6; }
+
+        .bulk-modal-card {
+          max-width: 720px;
+          width: 100%;
+        }
+        .modal-header-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .btn-close-x {
+          background: none;
+          border: none;
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: var(--color-text-muted);
+          cursor: pointer;
+          padding: 0;
+          line-height: 1;
+        }
+        .btn-close-x:hover {
+          color: var(--color-danger);
+        }
+        .btn-template-download {
+          background: var(--color-accent-soft);
+          color: #966319;
+          border: 1.5px solid #F0D9AE;
+          padding: 8px 14px;
+          border-radius: var(--radius-md);
+          font-weight: 700;
+          font-size: 0.82rem;
+          margin-bottom: 16px;
+          display: inline-block;
+        }
+        .btn-template-download:hover {
+          background: var(--color-accent);
+          color: #3A2700;
+          border-color: var(--color-accent);
+        }
+        .dropzone {
+          border: 2px dashed var(--color-border);
+          border-radius: var(--radius-lg);
+          padding: 32px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          background: var(--color-bg);
+          transition: all 0.15s ease-in-out;
+        }
+        .dropzone.dragging {
+          border-color: var(--color-primary-light);
+          background: #E8F4F1;
+        }
+        .dropzone-icon {
+          font-size: 2.2rem;
+          margin-bottom: 8px;
+        }
+        .dropzone-text {
+          font-size: 0.92rem;
+          font-weight: 500;
+          color: var(--color-text-muted);
+          margin-bottom: 4px;
+        }
+        .dropzone-or {
+          font-size: 0.78rem;
+          color: var(--color-text-muted);
+          text-transform: uppercase;
+          margin: 8px 0;
+          letter-spacing: 0.05em;
+        }
+        .btn-file-select {
+          background: var(--color-surface);
+          border: 1.5px solid var(--color-border);
+          padding: 8px 18px;
+          border-radius: var(--radius-md);
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: var(--color-text);
+          cursor: pointer;
+          transition: border-color 0.15s;
+        }
+        .btn-file-select:hover {
+          border-color: var(--color-primary-light);
+          color: var(--color-primary);
+        }
+        .preview-table-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+        }
+        .preview-table-header h4 {
+          font-size: 0.95rem;
+          font-family: var(--font-body);
+          color: var(--color-text);
+        }
+        .preview-table-wrap {
+          max-height: 280px;
+          overflow-y: auto;
+          border: 1px solid var(--color-border);
+          border-radius: var(--radius-md);
+        }
+        .preview-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 0.8rem;
+        }
+        .preview-table th {
+          background: var(--color-bg);
+          padding: 8px 12px;
+          font-size: 0.7rem;
+          color: var(--color-text-muted);
+          text-transform: uppercase;
+          border-bottom: 1px solid var(--color-border);
+          position: sticky;
+          top: 0;
+          z-index: 5;
+        }
+        .preview-table td {
+          padding: 8px 12px;
+          border-bottom: 1px solid var(--color-border);
+        }
+        .preview-table tr:last-child td {
+          border-bottom: none;
+        }
+        .preview-table code {
+          background: rgba(0,0,0,0.04);
+          padding: 2px 4px;
+          border-radius: 4px;
+          font-family: monospace;
+        }
       `}</style>
     </div>
   );

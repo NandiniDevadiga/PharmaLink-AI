@@ -1,8 +1,10 @@
 // In development: uses http://127.0.0.1:8000 (your local backend)
 // In production (Vercel): uses VITE_API_URL environment variable
 // which you set in Vercel dashboard to your Railway backend URL
-// PRODUCTION BUILD - connects to Render backend
-const BASE_URL = "https://pharmalink-ai.onrender.com";
+// Connects to local backend in development, and Render backend in production
+export const BASE_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+  ? "http://127.0.0.1:8000"
+  : "https://pharmalink-ai.onrender.com";
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -68,6 +70,23 @@ export const api = {
       method: "POST",
       headers: authHeaders(token),
       body: JSON.stringify({ username, active }),
+    }),
+  bulkUpload: (token, data) =>
+    request(`/admin/bulk-upload`, {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify(data),
+    }),
+  register: (username, password, role, pharmacyId, pharmacyName) =>
+    request(`/auth/register`, {
+      method: "POST",
+      body: JSON.stringify({
+        username,
+        password,
+        role,
+        pharmacy_id: pharmacyId,
+        pharmacy_name: pharmacyName,
+      }),
     }),
 };
 

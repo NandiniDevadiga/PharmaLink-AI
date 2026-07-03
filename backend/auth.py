@@ -32,22 +32,10 @@ SECRET_KEY = "pharmalink-ai-demo-secret-change-this-in-production"
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_MINUTES = 60 * 8  # 8 hour session
 
-USERS_FILE = os.path.join(os.path.dirname(__file__), "users.json")
+from database import db_load_users, db_save_user
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-
-def load_users():
-    with open(USERS_FILE) as f:
-        return json.load(f)
-
-
-def save_users(users: dict):
-    try:
-        with open(USERS_FILE, "w") as f:
-            json.dump(users, f, indent=2)
-    except (IOError, OSError) as e:
-        print(f"Warning: Could not save users.json (filesystem may be read-only on Vercel): {e}")
 
 
 class TokenData(BaseModel):
@@ -67,7 +55,7 @@ def authenticate_user(username: str, password: str, client_ip: str | None = None
     into users.json, so the admin panel can show "last login" per account.
     Returns None on failure (wrong username, wrong password, or disabled account).
     """
-    users = load_users()
+    users = db_load_users()
     user = users.get(username.lower())
     if not user:
         return None
@@ -79,8 +67,7 @@ def authenticate_user(username: str, password: str, client_ip: str | None = None
     # Record this successful login
     user["last_login_at"] = datetime.now(timezone.utc).isoformat()
     user["last_login_ip"] = client_ip
-    users[username.lower()] = user
-    save_users(users)
+    db_save_user(username, user)
 
     return user
 
@@ -136,7 +123,7 @@ def list_users_safe():
     Returns all accounts WITHOUT password hashes - safe to send to the
     frontend for the admin panel. Never expose password_hash over the API.
     """
-    users = load_users()
+    users = db_load_users()
     safe = []
     for username, info in users.items():
         safe.append({
@@ -153,23 +140,21 @@ def list_users_safe():
 
 
 def admin_reset_password(username: str, new_password: str):
-    users = load_users()
+    users = db_load_users()
     user = users.get(username.lower())
     if not user:
         return False
     user["password_hash"] = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
-    users[username.lower()] = user
-    save_users(users)
+    db_save_user(username, user)
     return True
 
 
 def admin_set_active(username: str, active: bool):
-    users = load_users()
+    users = db_load_users()
     user = users.get(username.lower())
     if not user:
         return False
     user["active"] = active
-    users[username.lower()] = user
-    save_users(users)
+    db_save_user(username, user)
     return True
 

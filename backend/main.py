@@ -32,15 +32,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
-# On Railway, the backend folder is the root, so data/ is right next to main.py
-if not os.path.exists(DATA_DIR):
-    DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+from database import get_dataframe_from_mongo, db, db_load_users, db_save_user
 
-df_pharmacies = pd.read_csv(os.path.join(DATA_DIR, "pharmacies.csv"))
-df_stock = pd.read_csv(os.path.join(DATA_DIR, "stock.csv"))
-df_sales = pd.read_csv(os.path.join(DATA_DIR, "sales_transactions.csv"))
-df_sales["date"] = pd.to_datetime(df_sales["date"])
+df_pharmacies = get_dataframe_from_mongo("pharmacies")
+df_stock = get_dataframe_from_mongo("stock")
+df_sales = get_dataframe_from_mongo("sales_transactions")
+if not df_sales.empty:
+    df_sales["date"] = pd.to_datetime(df_sales["date"])
+
 
 # Auto-generate medicine->condition lookup from the REAL catalog at startup.
 # This ensures every drug in our actual dataset (Lombard, Pansoft, Thyroprime
@@ -62,10 +61,9 @@ _CATALOG_CATEGORY_TO_CONDITION = {
 import re as _re
 
 def _build_catalog_medicine_map():
-    catalog_path = os.path.join(DATA_DIR, "real_medicine_catalog.csv")
-    if not os.path.exists(catalog_path):
+    cat = get_dataframe_from_mongo("real_medicine_catalog")
+    if cat.empty:
         return {}
-    cat = pd.read_csv(catalog_path)
     entries = {}
     for _, row in cat.iterrows():
         condition = _CATALOG_CATEGORY_TO_CONDITION.get(row["category"])
@@ -112,6 +110,88 @@ def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
 def read_current_user(current_user: TokenData = Depends(get_current_user)):
     """Returns who's currently logged in - used by frontend to restore session."""
     return current_user
+
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    role: str
+    pharmacy_id: Optional[str] = None
+    pharmacy_name: Optional[str] = None
+
+
+@app.post("/auth/register")
+def register_user(payload: RegisterRequest):
+    """
+    Registers a new user (admin or pharmacy manager).
+    Hashes the password and saves the account in MongoDB.
+    If the role is pharmacy, also inserts a default branch record
+    in the pharmacies collection if the pharmacy_id doesn't exist yet.
+    """
+    import datetime
+    import bcrypt
+
+    uname = payload.username.lower().strip()
+    if not uname:
+        raise HTTPException(status_code=400, detail="Username cannot be empty.")
+    
+    users = db_load_users()
+    if uname in users:
+        raise HTTPException(status_code=400, detail=f"Username '{uname}' already exists.")
+        
+    if len(payload.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
+        
+    if payload.role not in ("admin", "pharmacy"):
+        raise HTTPException(status_code=400, detail="Role must be 'admin' or 'pharmacy'.")
+        
+    if payload.role == "pharmacy":
+        if not payload.pharmacy_id:
+            raise HTTPException(status_code=400, detail="Pharmacy ID is required for pharmacy registration.")
+        if not payload.pharmacy_name:
+            raise HTTPException(status_code=400, detail="Pharmacy Name is required for pharmacy registration.")
+
+    def hash_pw(plain):
+        return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
+        
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    
+    new_user = {
+        "username": uname,
+        "password_hash": hash_pw(payload.password),
+        "role": payload.role,
+        "pharmacy_id": payload.pharmacy_id if payload.role == "pharmacy" else None,
+        "pharmacy_name": payload.pharmacy_name if payload.role == "pharmacy" else "Head Office",
+        "created_at": now,
+        "last_login_at": None,
+        "last_login_ip": None,
+        "active": True,
+    }
+    
+    db_save_user(uname, new_user)
+    
+    if payload.role == "pharmacy":
+        pharm_id = payload.pharmacy_id.strip()
+        exists = db.pharmacies.find_one({"pharmacy_id": pharm_id})
+        if not exists:
+            db.pharmacies.insert_one({
+                "pharmacy_id": pharm_id,
+                "pharmacy_name": payload.pharmacy_name.strip(),
+                "area": "Mumbai",
+                "latitude": 19.0760,
+                "longitude": 72.8777,
+                "address": "Registered Online Branch, Mumbai",
+                "pharmacist_name": uname,
+                "contact_number": "+91 9999999999",
+                "open_time": "08:00",
+                "close_time": "22:00"
+            })
+            # Sync global df_pharmacies
+            global df_pharmacies
+            df_pharmacies = get_dataframe_from_mongo("pharmacies")
+
+    return {"message": f"Successfully registered user '{uname}'."}
+
 
 
 # =============================================================================
@@ -162,6 +242,77 @@ def admin_set_active_endpoint(payload: SetActiveRequest, current_user: TokenData
     return {"message": f"{payload.username} is now {'active' if payload.active else 'disabled'}."}
 
 
+class BulkUserItem(BaseModel):
+    username: str
+    role: str
+    pharmacy_id: Optional[str] = None
+    pharmacy_name: str
+    password: str
+
+
+@app.post("/admin/bulk-upload")
+def admin_bulk_upload(payload: List[BulkUserItem], current_user: TokenData = Depends(require_admin)):
+    """
+    Bulk uploads multiple user accounts.
+    Performs validation on password length, roles, and checks for database
+    or intra-payload username duplicates. Hashed credentials are saved to MongoDB.
+    """
+    import datetime
+    import bcrypt
+
+    users = db_load_users()
+    new_users = []
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    def hash_pw(plain):
+        return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
+
+    # Step 1: Pre-validation of all rows before writing any data (atomicity check)
+    seen_in_payload = set()
+    for index, item in enumerate(payload):
+        uname = item.username.lower().strip()
+        if not uname:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Row {index + 1}: Username cannot be empty."
+            )
+        if uname in users or uname in seen_in_payload:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Row {index + 1}: Username '{uname}' already exists."
+            )
+        if item.role not in ("admin", "pharmacy"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Row {index + 1}: Role must be 'admin' or 'pharmacy'."
+            )
+        if len(item.password) < 6:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Row {index + 1}: Password must be at least 6 characters."
+            )
+        
+        seen_in_payload.add(uname)
+        new_users.append({
+            "username": uname,
+            "password_hash": hash_pw(item.password),
+            "role": item.role,
+            "pharmacy_id": item.pharmacy_id if item.role == "pharmacy" else None,
+            "pharmacy_name": item.pharmacy_name if item.role == "pharmacy" else "Head Office",
+            "created_at": now,
+            "last_login_at": None,
+            "last_login_ip": None,
+            "active": True,
+        })
+
+    # Step 2: Save valid hashed users to database
+    for nu in new_users:
+        db_save_user(nu["username"], nu)
+
+    return {"message": f"Successfully imported {len(new_users)} user accounts."}
+
+
+
 # =============================================================================
 # 1. MED LOCATOR
 # =============================================================================
@@ -198,11 +349,14 @@ def search_medicine(
     # record it as a demand signal for the dashboard
     if len(in_stock) == 0 and not matches.empty:
         for _, row in out_of_stock_nearby.head(3).iterrows():
-            _demand_log.append({
-                "drug_name": drug_name,
-                "pharmacy_id": row["pharmacy_id"],
-                "timestamp": pd.Timestamp.now().isoformat(),
-            })
+            try:
+                db.unmet_demand.insert_one({
+                    "drug_name": drug_name,
+                    "pharmacy_id": row["pharmacy_id"],
+                    "timestamp": pd.Timestamp.now().isoformat(),
+                })
+            except Exception as ex:
+                print(f"Error logging unmet demand: {ex}")
 
     results = in_stock[[
         "pharmacy_name", "area", "address", "distance_km", "drug_name",
@@ -887,10 +1041,7 @@ def forecast_orders(
     return forecast_rows[:50]  # Top 50 most actionable
 
 
-# In-memory demand log: tracks when a patient searched for a medicine
-# that was either out of stock locally or not found at all.
-# In a production system this would be a database table.
-_demand_log: list[dict] = []
+# In-memory demand log is no longer used. We now log to MongoDB 'unmet_demand' collection.
 
 
 @app.post("/locator/log-demand")
@@ -905,11 +1056,14 @@ async def log_unmet_demand(request: Request):
     drug_name = body.get("drug_name", "").strip()
     pharmacy_id = body.get("pharmacy_id")  # which pharmacy the customer was near
     if drug_name:
-        _demand_log.append({
-            "drug_name": drug_name,
-            "pharmacy_id": pharmacy_id,
-            "timestamp": pd.Timestamp.now().isoformat(),
-        })
+        try:
+            db.unmet_demand.insert_one({
+                "drug_name": drug_name,
+                "pharmacy_id": pharmacy_id,
+                "timestamp": pd.Timestamp.now().isoformat(),
+            })
+        except Exception as ex:
+            print(f"Error logging unmet demand: {ex}")
     return {"logged": True}
 
 
@@ -923,13 +1077,19 @@ def unmet_demand(current_user: TokenData = Depends(get_current_user)):
     Also cross-references with other pharmacies that DO have it in stock,
     so this branch can refer patients or place an inter-pharmacy order.
     """
-    if not _demand_log:
+    try:
+        cursor = db.unmet_demand.find()
+        logs = list(cursor)
+    except Exception as ex:
+        logs = []
+        print(f"Error loading unmet demand: {ex}")
+
+    if not logs:
         return {"unmet_demands": [], "message": "No unmet demand logged yet. Data builds up as customers use the Med Locator."}
 
     # Filter to this pharmacy's unmet demands (or all for admin)
-    logs = _demand_log
     if current_user.role == "pharmacy":
-        logs = [d for d in _demand_log if d.get("pharmacy_id") == current_user.pharmacy_id]
+        logs = [d for d in logs if d.get("pharmacy_id") == current_user.pharmacy_id]
 
     if not logs:
         return {"unmet_demands": [], "message": "No unmet demand for your branch yet."}

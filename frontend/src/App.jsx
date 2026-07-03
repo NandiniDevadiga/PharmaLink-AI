@@ -7,6 +7,9 @@ import AiDoc from "./pages/AiDoc";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import AdminPanel from "./pages/AdminPanel";
+import MedicineCatalog from "./pages/MedicineCatalog";
+import Inventory from "./pages/Inventory";
+import PointOfSale from "./pages/PointOfSale";
 
 export default function App() {
   return (
@@ -26,10 +29,34 @@ export default function App() {
             }
           />
           <Route
+            path="/inventory"
+            element={
+              <ProtectedRoute>
+                <Inventory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pos"
+            element={
+              <ProtectedRoute>
+                <PointOfSale />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin"
             element={
               <ProtectedRoute adminOnly>
                 <AdminPanel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/medicines"
+            element={
+              <ProtectedRoute adminOnly>
+                <MedicineCatalog />
               </ProtectedRoute>
             }
           />

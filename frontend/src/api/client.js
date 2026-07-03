@@ -77,15 +77,22 @@ export const api = {
       headers: authHeaders(token),
       body: JSON.stringify(data),
     }),
-  register: (username, password, role, pharmacyId, pharmacyName) =>
+  register: (payload) =>
     request(`/auth/register`, {
       method: "POST",
       body: JSON.stringify({
-        username,
-        password,
-        role,
-        pharmacy_id: pharmacyId,
-        pharmacy_name: pharmacyName,
+        username: payload.username,
+        password: payload.password,
+        role: payload.role,
+        pharmacy_id: payload.pharmacyId,
+        pharmacy_name: payload.pharmacyName,
+        area: payload.area,
+        address: payload.address,
+        contact_number: payload.contactNumber,
+        open_time: payload.openTime,
+        close_time: payload.closeTime,
+        latitude: payload.latitude,
+        longitude: payload.longitude,
       }),
     }),
   uploadStock: (token, data) =>
@@ -93,6 +100,22 @@ export const api = {
       method: "POST",
       headers: authHeaders(token),
       body: JSON.stringify(data),
+    }),
+  getPharmacyStock: (token) => 
+    request(`/pharmacy/stock`, { headers: authHeaders(token) }),
+  searchGlobalMedicines: (token, q) =>
+    request(`/pharmacy/medicines/search?q=${encodeURIComponent(q)}`, { headers: authHeaders(token) }),
+  updatePharmacyStock: (token, itemData) => 
+    request(`/pharmacy/stock`, {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify(itemData),
+    }),
+  recordSale: (token, items) => 
+    request(`/pharmacy/sales`, {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify({ items }),
     }),
 };
 

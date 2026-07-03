@@ -35,10 +35,6 @@ app.add_middleware(
 from database import get_dataframe_from_mongo, db, db_load_users, db_save_user
 
 df_pharmacies = get_dataframe_from_mongo("pharmacies")
-df_stock = get_dataframe_from_mongo("stock")
-df_sales = get_dataframe_from_mongo("sales_transactions")
-if not df_sales.empty:
-    df_sales["date"] = pd.to_datetime(df_sales["date"])
 
 
 # Auto-generate medicine->condition lookup from the REAL catalog at startup.
@@ -118,6 +114,13 @@ class RegisterRequest(BaseModel):
     role: str
     pharmacy_id: Optional[str] = None
     pharmacy_name: Optional[str] = None
+    area: Optional[str] = None
+    address: Optional[str] = None
+    contact_number: Optional[str] = None
+    open_time: Optional[str] = "08:00"
+    close_time: Optional[str] = "22:00"
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 @app.post("/auth/register")
@@ -177,14 +180,14 @@ def register_user(payload: RegisterRequest):
             db.pharmacies.insert_one({
                 "pharmacy_id": pharm_id,
                 "pharmacy_name": payload.pharmacy_name.strip(),
-                "area": "Mumbai",
-                "latitude": 19.0760,
-                "longitude": 72.8777,
-                "address": "Registered Online Branch, Mumbai",
+                "area": payload.area.strip() if payload.area else "Unknown Area",
+                "latitude": payload.latitude if payload.latitude is not None else 0.0,
+                "longitude": payload.longitude if payload.longitude is not None else 0.0,
+                "address": payload.address.strip() if payload.address else "Address not provided",
                 "pharmacist_name": uname,
-                "contact_number": "+91 9999999999",
-                "open_time": "08:00",
-                "close_time": "22:00"
+                "contact_number": payload.contact_number.strip() if payload.contact_number else "No contact provided",
+                "open_time": payload.open_time,
+                "close_time": payload.close_time
             })
             # Sync global df_pharmacies
             global df_pharmacies
@@ -248,6 +251,13 @@ class BulkUserItem(BaseModel):
     pharmacy_id: Optional[str] = None
     pharmacy_name: str
     password: str
+    area: Optional[str] = None
+    address: Optional[str] = None
+    contact_number: Optional[str] = None
+    open_time: Optional[str] = "08:00"
+    close_time: Optional[str] = "22:00"
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 @app.post("/admin/bulk-upload")
@@ -304,10 +314,37 @@ def admin_bulk_upload(payload: List[BulkUserItem], current_user: TokenData = Dep
             "last_login_ip": None,
             "active": True,
         })
+        
+        # Optionally track bulk payloads to insert pharmacies
+        if item.role == "pharmacy" and item.pharmacy_id:
+            item.pharm_id = item.pharmacy_id
 
     # Step 2: Save valid hashed users to database
     for nu in new_users:
         db_save_user(nu["username"], nu)
+        
+    # Step 3: Insert pharmacy records
+    for item in payload:
+        if item.role == "pharmacy" and item.pharmacy_id:
+            pharm_id = item.pharmacy_id.strip()
+            exists = db.pharmacies.find_one({"pharmacy_id": pharm_id})
+            if not exists:
+                db.pharmacies.insert_one({
+                    "pharmacy_id": pharm_id,
+                    "pharmacy_name": item.pharmacy_name.strip(),
+                    "area": item.area.strip() if item.area else "Unknown Area",
+                    "latitude": item.latitude if item.latitude is not None else 0.0,
+                    "longitude": item.longitude if item.longitude is not None else 0.0,
+                    "address": item.address.strip() if item.address else "Address not provided",
+                    "pharmacist_name": item.username,
+                    "contact_number": item.contact_number.strip() if item.contact_number else "No contact provided",
+                    "open_time": item.open_time if item.open_time else "08:00",
+                    "close_time": item.close_time if item.close_time else "22:00"
+                })
+
+    # Sync global df_pharmacies
+    global df_pharmacies
+    df_pharmacies = get_dataframe_from_mongo("pharmacies")
 
     return {"message": f"Successfully imported {len(new_users)} user accounts."}
 
@@ -828,30 +865,40 @@ async def upload_prescription(file: UploadFile = File(...)):
 # =============================================================================
 # 3. PHARMACY DASHBOARD - analytics endpoints (PROTECTED - login required)
 # =============================================================================
-def scope_sales(df: pd.DataFrame, user: TokenData) -> pd.DataFrame:
-    """Admin sees all branches. Pharmacy role sees only their own pharmacy_id."""
-    if user.role == "admin":
-        return df
-    return df[df["pharmacy_id"] == user.pharmacy_id]
+def get_sales_df(user: TokenData) -> pd.DataFrame:
+    query = {} if user.role == "admin" else {"pharmacy_id": user.pharmacy_id}
+    docs = list(db.sales_transactions.find(query, {"_id": 0}))
+    if not docs:
+        return pd.DataFrame(columns=[
+            "transaction_id", "date", "timestamp", "pharmacy_id", "pharmacy_name",
+            "area", "drug_name", "category", "quantity", "unit_price_inr", "total_inr", "otc_or_rx"
+        ])
+    df = pd.DataFrame(docs)
+    df["date"] = pd.to_datetime(df["date"])
+    return df
 
-
-def scope_stock(df: pd.DataFrame, user: TokenData) -> pd.DataFrame:
-    if user.role == "admin":
-        return df
-    return df[df["pharmacy_id"] == user.pharmacy_id]
+def get_stock_df(user: TokenData) -> pd.DataFrame:
+    query = {} if user.role == "admin" else {"pharmacy_id": user.pharmacy_id}
+    docs = list(db.stock.find(query, {"_id": 0}))
+    if not docs:
+        return pd.DataFrame(columns=[
+            "pharmacy_id", "pharmacy_name", "drug_name", "category", "manufacturer",
+            "unit_price_inr", "stock_qty", "otc_or_rx"
+        ])
+    return pd.DataFrame(docs)
 
 
 @app.get("/dashboard/summary")
 def dashboard_summary(current_user: TokenData = Depends(get_current_user)):
-    sales = scope_sales(df_sales, current_user)
-    stock = scope_stock(df_stock, current_user)
+    sales = get_sales_df(current_user)
+    stock = get_stock_df(current_user)
 
-    total_revenue = float(sales["total_inr"].sum())
+    total_revenue = float(sales["total_inr"].sum()) if not sales.empty else 0.0
     total_transactions = int(len(sales))
     avg_order_value = float(sales["total_inr"].mean()) if total_transactions else 0.0
-    total_units_sold = int(sales["quantity"].sum())
-    low_stock_count = int((stock["stock_qty"] < 20).sum())
-    branch_count = 1 if current_user.role == "pharmacy" else int(df_pharmacies.shape[0])
+    total_units_sold = int(sales["quantity"].sum()) if not sales.empty else 0
+    low_stock_count = int((stock["stock_qty"] < 20).sum()) if not stock.empty else 0
+    branch_count = 1 if current_user.role == "pharmacy" else db.pharmacies.count_documents({})
 
     return {
         "scope": "branch" if current_user.role == "pharmacy" else "network",
@@ -870,7 +917,9 @@ def sales_trend(
     granularity: str = Query("monthly", enum=["daily", "monthly"]),
     current_user: TokenData = Depends(get_current_user),
 ):
-    df = scope_sales(df_sales, current_user).copy()
+    df = get_sales_df(current_user)
+    if df.empty:
+        return []
     if granularity == "monthly":
         df["period"] = df["date"].dt.strftime("%Y-%m")
     else:
@@ -882,7 +931,9 @@ def sales_trend(
 
 @app.get("/dashboard/category-breakdown")
 def category_breakdown(current_user: TokenData = Depends(get_current_user)):
-    sales = scope_sales(df_sales, current_user)
+    sales = get_sales_df(current_user)
+    if sales.empty:
+        return []
     cat = sales.groupby("category").agg(
         revenue_inr=("total_inr", "sum"),
         units_sold=("quantity", "sum"),
@@ -893,7 +944,9 @@ def category_breakdown(current_user: TokenData = Depends(get_current_user)):
 
 @app.get("/dashboard/top-drugs")
 def top_drugs(limit: int = 10, current_user: TokenData = Depends(get_current_user)):
-    sales = scope_sales(df_sales, current_user)
+    sales = get_sales_df(current_user)
+    if sales.empty:
+        return []
     top = sales.groupby("drug_name").agg(
         revenue_inr=("total_inr", "sum"),
         units_sold=("quantity", "sum"),
@@ -908,8 +961,11 @@ def branch_performance(current_user: TokenData = Depends(get_current_user)):
     A pharmacy user gets a 403 here (frontend won't even show this chart to them).
     """
     if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Branch comparison is only available to head office accounts.")
-    perf = df_sales.groupby(["pharmacy_name", "area"]).agg(
+        raise HTTPException(status_code=403, detail="Branch comparison is admin-only.")
+    sales = get_sales_df(current_user)
+    if sales.empty:
+        return []
+    perf = sales.groupby(["pharmacy_id", "pharmacy_name"]).agg(
         revenue_inr=("total_inr", "sum"),
         transactions=("transaction_id", "count"),
     ).reset_index().sort_values("revenue_inr", ascending=False)
@@ -918,16 +974,20 @@ def branch_performance(current_user: TokenData = Depends(get_current_user)):
 
 @app.get("/dashboard/low-stock")
 def low_stock(threshold: int = 20, current_user: TokenData = Depends(get_current_user)):
-    stock = scope_stock(df_stock, current_user)
-    low = stock[stock["stock_qty"] < threshold][[
+    stock = get_stock_df(current_user)
+    if stock.empty:
+        return []
+    ls = stock[stock["stock_qty"] < threshold].copy()[[
         "pharmacy_name", "drug_name", "category", "stock_qty", "unit_price_inr"
     ]].sort_values("stock_qty")
-    return low.to_dict(orient="records")
+    return ls.to_dict(orient="records")
 
 
 @app.get("/dashboard/otc-vs-rx")
 def otc_vs_rx(current_user: TokenData = Depends(get_current_user)):
-    sales = scope_sales(df_sales, current_user)
+    sales = get_sales_df(current_user)
+    if sales.empty:
+        return []
     split = sales.groupby("otc_or_rx").agg(
         revenue_inr=("total_inr", "sum"),
         transactions=("transaction_id", "count"),
@@ -938,7 +998,9 @@ def otc_vs_rx(current_user: TokenData = Depends(get_current_user)):
 @app.get("/dashboard/quarterly-sales")
 def quarterly_sales(current_user: TokenData = Depends(get_current_user)):
     """Revenue and units sold grouped by quarter (Q1/Q2/Q3/Q4)."""
-    df = scope_sales(df_sales, current_user).copy()
+    df = get_sales_df(current_user).copy()
+    if df.empty:
+        return []
     df["quarter"] = df["date"].dt.to_period("Q").astype(str)
     result = df.groupby("quarter").agg(
         revenue_inr=("total_inr", "sum"),
@@ -957,7 +1019,9 @@ def seasonal_heatmap(current_user: TokenData = Depends(get_current_user)):
     Returned as a list of {category, month, units_sold} for the frontend
     to render as a heatmap or grouped bar chart.
     """
-    df = scope_sales(df_sales, current_user).copy()
+    df = get_sales_df(current_user).copy()
+    if df.empty:
+        return []
     df["month_num"] = df["date"].dt.month
     df["month_name"] = df["date"].dt.strftime("%b")  # Jan, Feb, etc.
 
@@ -986,8 +1050,11 @@ def forecast_orders(
     This is the same logic used by small pharmacy inventory systems —
     no ML needed, explainable, and works well on a year of data.
     """
-    sales = scope_sales(df_sales, current_user).copy()
-    stock = scope_stock(df_stock, current_user).copy()
+    sales = get_sales_df(current_user).copy()
+    stock = get_stock_df(current_user).copy()
+    
+    if sales.empty:
+        return []
 
     # Seasonal multipliers per category per month
     # (same ones used in data generation, now surfaced for forecasting)
@@ -1100,18 +1167,19 @@ def unmet_demand(current_user: TokenData = Depends(get_current_user)):
 
     result = []
     for drug, count in drug_counts.most_common(20):
-        # Check which other pharmacies have this drug in stock
-        available_elsewhere = df_stock[
-            (df_stock["drug_name"].str.contains(drug, case=False, na=False)) &
-            (df_stock["stock_qty"] > 0)
-        ][["pharmacy_name", "area", "stock_qty", "unit_price_inr"]].head(3).to_dict(orient="records")
+        # Check which other pharmacies have this drug in stock (live from DB)
+        available_elsewhere_docs = list(db.stock.find(
+            {"drug_name": {"$regex": drug, "$options": "i"}, "stock_qty": {"$gt": 0}},
+            {"_id": 0, "pharmacy_name": 1, "area": 1, "stock_qty": 1, "unit_price_inr": 1}
+        ).limit(3))
 
         # Check if this pharmacy has it
         if current_user.role == "pharmacy":
-            local_stock = df_stock[
-                (df_stock["pharmacy_id"] == current_user.pharmacy_id) &
-                (df_stock["drug_name"].str.contains(drug, case=False, na=False))
-            ]["stock_qty"].sum()
+            local_doc = db.stock.find_one(
+                {"pharmacy_id": current_user.pharmacy_id, "drug_name": {"$regex": drug, "$options": "i"}},
+                {"_id": 0, "stock_qty": 1}
+            )
+            local_stock = local_doc["stock_qty"] if local_doc else 0
         else:
             local_stock = None
 
@@ -1119,7 +1187,7 @@ def unmet_demand(current_user: TokenData = Depends(get_current_user)):
             "drug_name": drug,
             "times_searched": count,
             "local_stock": int(local_stock) if local_stock is not None else None,
-            "available_at_other_pharmacies": available_elsewhere,
+            "available_at_other_pharmacies": available_elsewhere_docs,
         })
 
     return {"unmet_demands": result}
@@ -1179,6 +1247,477 @@ def bulk_upload_stock(payload: List[StockUploadItem], current_user: TokenData = 
     
     return {"message": f"Successfully updated stock list with {len(new_stock)} items for branch '{pharm_name}'."}
 
+
+# =============================================================================
+# 4. ADMIN — MEDICINE CATALOG MANAGEMENT (Upload Kaggle CSV + full CRUD)
+# =============================================================================
+
+CATEGORY_KEYWORDS_CATALOG = {
+    "Analgesic":       ["paracetamol", "ibuprofen", "aceclofenac", "diclofenac",
+                         "aspirin", "naproxen", "tramadol", "mefenamic"],
+    "Antibiotic":       ["amoxycillin", "amoxicillin", "azithromycin", "ciprofloxacin",
+                         "doxycycline", "cefixime", "ceftriaxone", "levofloxacin",
+                         "ofloxacin", "clindamycin", "cefuroxime"],
+    "Antihistamine":    ["cetirizine", "levocetirizine", "fexofenadine", "loratadine",
+                         "montelukast", "chlorpheniramine"],
+    "Antidiabetic":     ["metformin", "glimepiride", "glipizide", "sitagliptin",
+                         "insulin", "vildagliptin", "voglibose"],
+    "Cardiovascular":   ["amlodipine", "atorvastatin", "losartan", "telmisartan",
+                         "atenolol", "metoprolol", "rosuvastatin", "clopidogrel",
+                         "ramipril", "enalapril"],
+    "Gastrointestinal": ["omeprazole", "pantoprazole", "ranitidine", "domperidone",
+                         "rabeprazole", "esomeprazole", "ondansetron"],
+    "Neurological":     ["gabapentin", "sertraline", "escitalopram", "amitriptyline",
+                         "clonazepam", "pregabalin", "fluoxetine"],
+    "Hormonal":         ["levothyroxine", "thyroxine"],
+    "Respiratory":      ["salbutamol", "budesonide", "montelukast", "theophylline",
+                         "formoterol", "ipratropium"],
+    "Supplement":       ["vitamin", "calcium", "folic acid", "iron", "zinc",
+                         "multivitamin", "cholecalciferol"],
+    "Dermatological":   ["clobetasol", "mometasone", "betamethasone", "ketoconazole",
+                         "fusidic", "tacrolimus", "clotrimazole"],
+}
+
+
+def _assign_category_from_composition(composition: str) -> str:
+    if not composition or str(composition).lower() in ("nan", ""):
+        return "Other"
+    text = str(composition).lower()
+    for cat, keywords in CATEGORY_KEYWORDS_CATALOG.items():
+        for kw in keywords:
+            if kw in text:
+                return cat
+    return "Other"
+
+
+def _extract_pack_count(label: str) -> int:
+    import re as _re
+    if not label or str(label).lower() == "nan":
+        return 1
+    match = _re.search(r"of\s+(\d+)", str(label))
+    if match:
+        return max(int(match.group(1)), 1)
+    return 1
+
+
+def _guess_otc_rx(pack_size_label: str, category: str) -> str:
+    if "injection" in str(pack_size_label).lower():
+        return "Rx"
+    if category in ("Antibiotic", "Cardiovascular", "Antidiabetic", "Neurological", "Hormonal"):
+        return "Rx"
+    return "OTC"
+
+
+class MedicineUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    manufacturer_name: Optional[str] = None
+    price: Optional[float] = None
+    pack_size_label: Optional[str] = None
+    short_composition1: Optional[str] = None
+    short_composition2: Optional[str] = None
+    type: Optional[str] = None
+    Is_discontinued: Optional[bool] = None
+    category: Optional[str] = None
+    otc_or_rx: Optional[str] = None
+
+
+class BulkDeleteRequest(BaseModel):
+    ids: List[str]
+
+
+@app.post("/admin/medicines/upload-csv")
+async def upload_medicine_csv(
+    file: UploadFile = File(...),
+    current_user: TokenData = Depends(require_admin),
+):
+    """
+    Upload the Kaggle A_Z_medicines_dataset_of_India.csv (or any CSV with same columns).
+    Parses, auto-assigns category from composition, computes unit price, and stores in MongoDB.
+    Old medicine catalog is replaced on every upload.
+    """
+    from bson import ObjectId
+
+    if not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Only .csv files are accepted.")
+
+    contents = await file.read()
+    try:
+        import io as _io
+        df_raw = pd.read_csv(_io.BytesIO(contents), low_memory=False)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not parse CSV: {str(e)}")
+
+    # Normalize column names (strip whitespace, handle special chars)
+    df_raw.columns = [c.strip() for c in df_raw.columns]
+
+    # Detect which column has the price — handles "price(₹)" and "price"
+    price_col = None
+    for col in df_raw.columns:
+        if "price" in col.lower():
+            price_col = col
+            break
+    if price_col is None:
+        raise HTTPException(status_code=400, detail="Could not find a 'price' column in the CSV.")
+
+    required_cols = ["name", price_col]
+    missing = [c for c in required_cols if c not in df_raw.columns]
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Missing required columns: {missing}")
+
+    # Drop completely empty rows
+    df_raw = df_raw.dropna(subset=["name"])
+    df_raw = df_raw[df_raw["name"].str.strip() != ""]
+
+    # Convert price to numeric
+    df_raw[price_col] = pd.to_numeric(df_raw[price_col], errors="coerce")
+
+    # Assign category
+    comp_col = "short_composition1" if "short_composition1" in df_raw.columns else None
+    if comp_col:
+        df_raw["category"] = df_raw[comp_col].apply(_assign_category_from_composition)
+    else:
+        df_raw["category"] = "Other"
+
+    # Compute unit price
+    pack_col = "pack_size_label" if "pack_size_label" in df_raw.columns else None
+    if pack_col:
+        df_raw["pack_count"] = df_raw[pack_col].apply(_extract_pack_count)
+    else:
+        df_raw["pack_count"] = 1
+    df_raw["unit_price_inr"] = (df_raw[price_col] / df_raw["pack_count"]).round(2)
+
+    # OTC/Rx
+    df_raw["otc_or_rx"] = df_raw.apply(
+        lambda r: _guess_otc_rx(
+            r.get(pack_col, "") if pack_col else "",
+            r.get("category", "Other")
+        ), axis=1
+    )
+
+    # Handle Is_discontinued
+    if "Is_discontinued" in df_raw.columns:
+        df_raw["Is_discontinued"] = df_raw["Is_discontinued"].apply(
+            lambda x: True if str(x).strip().upper() in ("TRUE", "1", "YES") else False
+        )
+    else:
+        df_raw["Is_discontinued"] = False
+
+    # Build records
+    keep_cols = ["name", price_col, "Is_discontinued", "category", "unit_price_inr", "otc_or_rx"]
+    optional_cols = ["manufacturer_name", "type", "pack_size_label",
+                     "short_composition1", "short_composition2"]
+    for oc in optional_cols:
+        if oc in df_raw.columns:
+            keep_cols.append(oc)
+
+    df_clean = df_raw[keep_cols].copy()
+    # Rename price column for consistency
+    if price_col != "price":
+        df_clean = df_clean.rename(columns={price_col: "price"})
+
+    # Replace NaN with None for MongoDB
+    df_clean = df_clean.where(pd.notnull(df_clean), None)
+
+    records = df_clean.to_dict(orient="records")
+
+    # Drop old catalog + insert new
+    db.medicines.drop()
+    if records:
+        db.medicines.insert_many(records)
+
+    # Create index for fast search
+    try:
+        db.medicines.create_index("name")
+        db.medicines.create_index("category")
+    except Exception:
+        pass
+
+    preview = []
+    for r in records[:5]:
+        preview.append({
+            "name": r.get("name"),
+            "category": r.get("category"),
+            "price": r.get("price"),
+            "unit_price_inr": r.get("unit_price_inr"),
+            "otc_or_rx": r.get("otc_or_rx"),
+        })
+
+    return {
+        "message": f"Successfully uploaded {len(records):,} medicines.",
+        "total_rows": len(records),
+        "preview": preview,
+    }
+
+
+@app.get("/admin/medicines")
+def list_medicines(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=5, le=100),
+    search: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    otc_or_rx: Optional[str] = Query(None),
+    discontinued: Optional[bool] = Query(None),
+    current_user: TokenData = Depends(require_admin),
+):
+    """
+    Returns paginated medicine catalog with optional search/filter.
+    search      : partial match on medicine name (case-insensitive)
+    category    : exact match on category (Analgesic, Antibiotic, etc.)
+    otc_or_rx   : 'OTC' or 'Rx'
+    discontinued: true / false
+    """
+    from bson import ObjectId
+
+    query: dict = {}
+    if search:
+        query["name"] = {"$regex": search, "$options": "i"}
+    if category:
+        query["category"] = category
+    if otc_or_rx:
+        query["otc_or_rx"] = otc_or_rx
+    if discontinued is not None:
+        query["Is_discontinued"] = discontinued
+
+    total = db.medicines.count_documents(query)
+    skip = (page - 1) * page_size
+
+    cursor = db.medicines.find(query).skip(skip).limit(page_size)
+    rows = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        rows.append(doc)
+
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": math.ceil(total / page_size) if total > 0 else 1,
+        "data": rows,
+    }
+
+
+@app.get("/admin/medicines/categories")
+def get_medicine_categories(current_user: TokenData = Depends(require_admin)):
+    """Returns distinct categories present in the uploaded catalog."""
+    cats = db.medicines.distinct("category")
+    return {"categories": sorted([c for c in cats if c])}
+
+
+@app.get("/admin/medicines/{medicine_id}")
+def get_medicine(medicine_id: str, current_user: TokenData = Depends(require_admin)):
+    """Get a single medicine by MongoDB _id."""
+    from bson import ObjectId
+    try:
+        oid = ObjectId(medicine_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid medicine ID format.")
+    doc = db.medicines.find_one({"_id": oid})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Medicine not found.")
+    doc["_id"] = str(doc["_id"])
+    return doc
+
+
+@app.put("/admin/medicines/{medicine_id}")
+def update_medicine(
+    medicine_id: str,
+    payload: MedicineUpdateRequest,
+    current_user: TokenData = Depends(require_admin),
+):
+    """Edit an existing medicine record. Only provided fields are updated."""
+    from bson import ObjectId
+    try:
+        oid = ObjectId(medicine_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid medicine ID format.")
+
+    update_fields = {k: v for k, v in payload.dict().items() if v is not None}
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No fields provided to update.")
+
+    # Recompute category if composition changed
+    if "short_composition1" in update_fields and "category" not in update_fields:
+        update_fields["category"] = _assign_category_from_composition(
+            update_fields["short_composition1"]
+        )
+
+    result = db.medicines.update_one({"_id": oid}, {"$set": update_fields})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Medicine not found.")
+    return {"message": "Medicine updated successfully."}
+
+
+@app.delete("/admin/medicines/bulk")
+def bulk_delete_medicines(
+    payload: BulkDeleteRequest,
+    current_user: TokenData = Depends(require_admin),
+):
+    """Delete multiple medicines by a list of _id strings."""
+    from bson import ObjectId
+    oids = []
+    for id_str in payload.ids:
+        try:
+            oids.append(ObjectId(id_str))
+        except Exception:
+            raise HTTPException(status_code=400, detail=f"Invalid ID: {id_str}")
+    result = db.medicines.delete_many({"_id": {"$in": oids}})
+    return {"message": f"Deleted {result.deleted_count} medicine(s)."}
+
+
+@app.delete("/admin/medicines/{medicine_id}")
+def delete_medicine(medicine_id: str, current_user: TokenData = Depends(require_admin)):
+    """Delete a single medicine by _id."""
+    from bson import ObjectId
+    try:
+        oid = ObjectId(medicine_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid medicine ID format.")
+    result = db.medicines.delete_one({"_id": oid})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Medicine not found.")
+    return {"message": "Medicine deleted successfully."}
+
+
+# =============================================================================
+# REAL-TIME STOCK MANAGEMENT
+# =============================================================================
+
+class StockItem(BaseModel):
+    drug_name: str
+    category: Optional[str] = "Unknown"
+    manufacturer: Optional[str] = "Unknown"
+    unit_price_inr: float
+    stock_qty: int
+    otc_or_rx: Optional[str] = "OTC"
+
+@app.get("/pharmacy/stock")
+def get_pharmacy_stock(current_user: TokenData = Depends(get_current_user)):
+    """Get the current stock for the logged in pharmacy."""
+    if current_user.role != "pharmacy":
+        raise HTTPException(status_code=403, detail="Only pharmacies can view their stock.")
+    
+    pharm_id = current_user.pharmacy_id
+    if not pharm_id:
+        raise HTTPException(status_code=400, detail="No pharmacy ID found for this user.")
+        
+    cursor = db.stock.find({"pharmacy_id": pharm_id}, {"_id": 0})
+    return {"stock": list(cursor)}
+
+@app.get("/pharmacy/medicines/search")
+def search_global_medicines(q: str = "", current_user: TokenData = Depends(get_current_user)):
+    """Search the global medicine catalog to add to stock."""
+    if current_user.role != "pharmacy":
+        raise HTTPException(status_code=403, detail="Only pharmacies can use this endpoint.")
+    
+    if not q or len(q.strip()) < 2:
+        return {"results": []}
+        
+    query = {"drug_name": {"$regex": q.strip(), "$options": "i"}}
+    cursor = db.medicines.find(query, {"_id": 0}).limit(20)
+    return {"results": list(cursor)}
+
+
+@app.post("/pharmacy/stock")
+def add_update_pharmacy_stock(payload: StockItem, current_user: TokenData = Depends(get_current_user)):
+    """Add or update a specific medicine in the pharmacy's stock."""
+    if current_user.role != "pharmacy":
+        raise HTTPException(status_code=403, detail="Only pharmacies can update their stock.")
+    
+    pharm_id = current_user.pharmacy_id
+    if not pharm_id:
+        raise HTTPException(status_code=400, detail="No pharmacy ID found for this user.")
+
+    # Find the pharmacy name
+    pharm_record = db.pharmacies.find_one({"pharmacy_id": pharm_id})
+    pharm_name = pharm_record["pharmacy_name"] if pharm_record else "Unknown Pharmacy"
+
+    result = db.stock.update_one(
+        {"pharmacy_id": pharm_id, "drug_name": payload.drug_name},
+        {"$set": {
+            "pharmacy_name": pharm_name,
+            "category": payload.category,
+            "manufacturer": payload.manufacturer,
+            "unit_price_inr": payload.unit_price_inr,
+            "stock_qty": payload.stock_qty,
+            "otc_or_rx": payload.otc_or_rx
+        }},
+        upsert=True
+    )
+    
+    return {"message": "Stock updated successfully."}
+
+
+# =============================================================================
+# REAL-TIME POINT OF SALE
+# =============================================================================
+
+class SaleItem(BaseModel):
+    drug_name: str
+    quantity: int
+    unit_price_inr: float
+    category: Optional[str] = "Unknown"
+    otc_or_rx: Optional[str] = "OTC"
+
+class POSRequest(BaseModel):
+    items: List[SaleItem]
+
+@app.post("/pharmacy/sales")
+def record_sale(payload: POSRequest, current_user: TokenData = Depends(get_current_user)):
+    """Record a real-time sale and deduct from stock."""
+    import datetime
+    import uuid
+    if current_user.role != "pharmacy":
+        raise HTTPException(status_code=403, detail="Only pharmacies can record sales.")
+    
+    pharm_id = current_user.pharmacy_id
+    
+    pharm_record = db.pharmacies.find_one({"pharmacy_id": pharm_id})
+    pharm_name = pharm_record["pharmacy_name"] if pharm_record else "Unknown Pharmacy"
+    area = pharm_record.get("area", "Unknown Area") if pharm_record else "Unknown Area"
+    
+    transaction_id = str(uuid.uuid4())[:8].upper()
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    now_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+    
+    sales_to_insert = []
+    
+    for item in payload.items:
+        if item.quantity <= 0:
+            continue
+            
+        # Deduct from stock
+        stock_res = db.stock.update_one(
+            {"pharmacy_id": pharm_id, "drug_name": item.drug_name, "stock_qty": {"$gte": item.quantity}},
+            {"$inc": {"stock_qty": -item.quantity}}
+        )
+        
+        if stock_res.modified_count == 0:
+            existing = db.stock.find_one({"pharmacy_id": pharm_id, "drug_name": item.drug_name})
+            if existing:
+                raise HTTPException(status_code=400, detail=f"Not enough stock for {item.drug_name}. Current: {existing.get('stock_qty', 0)}")
+            else:
+                raise HTTPException(status_code=400, detail=f"Item {item.drug_name} not found in stock.")
+                
+        total_inr = round(item.quantity * item.unit_price_inr, 2)
+        sales_to_insert.append({
+            "transaction_id": f"TRX-{transaction_id}",
+            "date": now_date,
+            "timestamp": now_iso,
+            "pharmacy_id": pharm_id,
+            "pharmacy_name": pharm_name,
+            "area": area,
+            "drug_name": item.drug_name,
+            "category": item.category,
+            "quantity": item.quantity,
+            "unit_price_inr": item.unit_price_inr,
+            "total_inr": total_inr,
+            "otc_or_rx": item.otc_or_rx
+        })
+        
+    if sales_to_insert:
+        db.sales_transactions.insert_many(sales_to_insert)
+        
+    return {"message": "Sale recorded successfully.", "transaction_id": f"TRX-{transaction_id}"}
 
 @app.get("/")
 def root():

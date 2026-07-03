@@ -19,8 +19,19 @@ export default function NavBar() {
         <NavLink to="/" className="nav-link" end>Med Locator</NavLink>
         <NavLink to="/aidoc" className="nav-link">AI Doc</NavLink>
         <span className="nav-divider" aria-hidden="true" />
+        {session?.role === "admin" && (
+          <NavLink to="/admin/medicines" className="nav-link admin-nav">Medicine Catalog</NavLink>
+        )}
+        
+        {session?.role === "pharmacy" && (
+          <>
+            <NavLink to="/pos" className="nav-link pos-link">Point of Sale</NavLink>
+            <NavLink to="/inventory" className="nav-link">Inventory</NavLink>
+          </>
+        )}
+
         <NavLink to="/dashboard" className="nav-link staff-link">
-          {session ? "My Dashboard" : "Pharmacy Staff Login"}
+          {session ? (session.role === "admin" ? "Admin Dashboard" : "Analytics") : "Pharmacy Staff Login"}
         </NavLink>
       </div>
 
@@ -78,6 +89,22 @@ export default function NavBar() {
         }
         .nav-link.active {
           background: var(--color-primary);
+          color: white;
+        }
+        .admin-nav {
+          color: var(--color-accent);
+          background: var(--color-accent-soft);
+        }
+        .admin-nav.active {
+          background: var(--color-accent);
+          color: white;
+        }
+        .pos-link {
+          color: var(--color-success);
+          background: #E3F2EC;
+        }
+        .pos-link.active {
+          background: var(--color-success);
           color: white;
         }
         .staff-link {

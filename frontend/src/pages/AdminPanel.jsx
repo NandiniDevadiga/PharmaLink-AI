@@ -29,6 +29,12 @@ export default function AdminPanel() {
   const [bulkError, setBulkError] = useState(null);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
 
+  // Create Admin modal state
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [newAdminUser, setNewAdminUser] = useState("");
+  const [newAdminPass, setNewAdminPass] = useState("");
+  const [adminCreating, setAdminCreating] = useState(false);
+
 
   async function loadUsers() {
     setLoading(true);
@@ -78,7 +84,42 @@ export default function AdminPanel() {
     }
   }
 
+  async function handleCreateAdmin(e) {
+    e.preventDefault();
+    if (newAdminUser.trim().length < 3) return setActionMsg("Username must be at least 3 characters.");
+    if (newAdminPass.length < 6) return setActionMsg("Password must be at least 6 characters.");
+    setAdminCreating(true);
+    try {
+      const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const response = await fetch(`${apiBase}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({
+          username: newAdminUser.trim(),
+          password: newAdminPass,
+          role: "admin",
+          pharmacy_id: null,
+          pharmacy_name: "Head Office",
+          area: null, address: null, contact_number: null,
+          open_time: null, close_time: null, latitude: null, longitude: null
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Failed to create admin.");
+      setActionMsg(`✅ Admin account '${newAdminUser.trim()}' created successfully.`);
+      setShowAdminModal(false);
+      setNewAdminUser("");
+      setNewAdminPass("");
+      loadUsers();
+    } catch (err) {
+      setActionMsg(`❌ ${err.message}`);
+    } finally {
+      setAdminCreating(false);
+    }
+  }
+
   function handleCSVParse(text) {
+
     try {
       setBulkError(null);
       const lines = text.split(/\r?\n/);
@@ -169,8 +210,8 @@ export default function AdminPanel() {
   }
 
   function downloadCSVTemplate() {
-    const headers = "username,role,pharmacy_id,pharmacy_name,password\n";
-    const sampleRow = "ph013,pharmacy,PH013,Andheri East Chemist,pharma123\n";
+    const headers = "username,role,pharmacy_id,pharmacy_name,password,area,address,contact_number,open_time,close_time,latitude,longitude\n";
+    const sampleRow = "ph013,pharmacy,PH013,Andheri East Chemist,pharma123,Andheri,Shop 1 Main Rd,+919999999999,08:00,22:00,19.0760,72.8777\n";
     const blob = new Blob([headers + sampleRow], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -207,7 +248,14 @@ export default function AdminPanel() {
           <h1>Account Management</h1>
           <p className="admin-sub">Head office controls for all pharmacy + admin logins</p>
         </div>
-        <div>
+        <div style={{display:"flex", gap:"10px"}}>
+          <button
+            type="button"
+            className="btn-admin-create"
+            onClick={() => { setShowAdminModal(true); setActionMsg(null); }}
+          >
+            👤 Add Admin Account
+          </button>
           <button
             type="button"
             className="btn-confirm"
@@ -299,6 +347,45 @@ export default function AdminPanel() {
         </div>
       )}
 
+      {showAdminModal && (
+        <div className="modal-overlay" onClick={() => setShowAdminModal(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-row">
+              <h3>👤 Create Admin Account</h3>
+              <button className="btn-close-x" onClick={() => setShowAdminModal(false)}>&times;</button>
+            </div>
+            <p className="modal-sub">This account will have full Head Office access and can see all branch data.</p>
+            <form onSubmit={handleCreateAdmin} style={{display:"flex", flexDirection:"column", gap:"12px", marginTop:"16px"}}>
+              <div>
+                <label style={{fontSize:"0.8rem", fontWeight:600, display:"block", marginBottom:"4px"}}>Username</label>
+                <input
+                  type="text"
+                  placeholder="e.g. admin2"
+                  value={newAdminUser}
+                  onChange={(e) => setNewAdminUser(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label style={{fontSize:"0.8rem", fontWeight:600, display:"block", marginBottom:"4px"}}>Password <span style={{color:"var(--color-text-muted)", fontWeight:400}}>(min. 6 characters)</span></label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={newAdminPass}
+                  onChange={(e) => setNewAdminPass(e.target.value)}
+                />
+              </div>
+              <div className="modal-actions" style={{marginTop:"4px"}}>
+                <button type="button" className="btn-cancel" onClick={() => setShowAdminModal(false)}>Cancel</button>
+                <button type="submit" className="btn-confirm" disabled={adminCreating}>
+                  {adminCreating ? "Creating…" : "Create Admin Account"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showBulkModal && (
         <div className="modal-overlay" onClick={() => { if (!bulkSubmitting) setShowBulkModal(false); }}>
           <div className="modal-card bulk-modal-card" onClick={(e) => e.stopPropagation()}>
@@ -357,6 +444,7 @@ export default function AdminPanel() {
                         <th>Role</th>
                         <th>Pharmacy ID</th>
                         <th>Pharmacy Name</th>
+                        <th>Area</th>
                         <th>Password</th>
                       </tr>
                     </thead>
@@ -371,6 +459,7 @@ export default function AdminPanel() {
                           </td>
                           <td>{row.pharmacy_id || "—"}</td>
                           <td>{row.pharmacy_name || "Head Office"}</td>
+                          <td>{row.area || "—"}</td>
                           <td><code>{row.password}</code></td>
                         </tr>
                       ))}
@@ -635,6 +724,22 @@ export default function AdminPanel() {
           border-radius: 4px;
           font-family: monospace;
         }
+        .btn-admin-create {
+          background: #EEF3FF;
+          border: 1.5px solid #BFCFFE;
+          color: var(--color-primary);
+          padding: 10px 18px;
+          border-radius: var(--radius-md);
+          font-size: 0.88rem;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: background 0.15s;
+          white-space: nowrap;
+        }
+        .btn-admin-create:hover { background: #D9E5FF; }
       `}</style>
     </div>
   );

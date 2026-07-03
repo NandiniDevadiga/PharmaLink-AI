@@ -6,9 +6,14 @@ export const BASE_URL = window.location.hostname === "localhost" || window.locat
   ? "http://127.0.0.1:8000"
   : "https://pharmalink-ai.onrender.com";
 async function request(path, options = {}) {
+  const requestHeaders = {
+    "Content-Type": "application/json",
+    ...(options.headers || {})
+  };
+  
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers: requestHeaders
   });
   if (!res.ok) {
     if (res.status === 401) throw new Error("__UNAUTHORIZED__");

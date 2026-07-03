@@ -1612,9 +1612,22 @@ def search_global_medicines(q: str = "", current_user: TokenData = Depends(get_c
     if not q or len(q.strip()) < 2:
         return {"results": []}
         
-    query = {"drug_name": {"$regex": q.strip(), "$options": "i"}}
+    query = {"name": {"$regex": q.strip(), "$options": "i"}}
     cursor = db.medicines.find(query, {"_id": 0}).limit(20)
-    return {"results": list(cursor)}
+    
+    # Map the Kaggle CSV fields to what Inventory.jsx expects
+    mapped_results = []
+    for doc in cursor:
+        mapped_results.append({
+            "drug_name": doc.get("name"),
+            "category": doc.get("category", "Other"),
+            "manufacturer": doc.get("manufacturer_name", "Unknown"),
+            "unit_price_inr": doc.get("unit_price_inr", 0),
+            "otc_or_rx": doc.get("otc_or_rx", "OTC")
+        })
+        
+    return {"results": mapped_results}
+
 
 
 @app.post("/pharmacy/stock")

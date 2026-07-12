@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "../api/client";
+import { api, BASE_URL } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 
 function formatTimestamp(iso) {
@@ -90,8 +90,7 @@ export default function AdminPanel() {
     if (newAdminPass.length < 6) return setActionMsg("Password must be at least 6 characters.");
     setAdminCreating(true);
     try {
-      const apiBase = import.meta.env.VITE_API_URL || "http://localhost:8000";
-      const response = await fetch(`${apiBase}/auth/register`, {
+      const response = await fetch(`${BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({

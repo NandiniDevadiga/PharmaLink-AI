@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "../auth/AuthContext";
+import { BASE_URL } from "../api/client";
 
-const API = "http://localhost:8000";
 
 const CATEGORIES = [
   "All",
@@ -69,7 +69,7 @@ function EditModal({ medicine, token, onClose, onSaved }) {
     setSaving(true);
     setErr("");
     try {
-      const res = await fetch(`${API}/admin/medicines/${medicine._id}`, {
+      const res = await fetch(`${BASE_URL}/admin/medicines/${medicine._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -237,7 +237,7 @@ export default function MedicineCatalog() {
       if (discontinued === "discontinued") params.set("discontinued", "true");
       if (discontinued === "active") params.set("discontinued", "false");
 
-      const res = await fetch(`${API}/admin/medicines?${params}`, {
+      const res = await fetch(`${BASE_URL}/admin/medicines?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error("Failed to load medicines");
@@ -267,7 +267,7 @@ export default function MedicineCatalog() {
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const res = await fetch(`${API}/admin/medicines/upload-csv`, {
+      const res = await fetch(`${BASE_URL}/admin/medicines/upload-csv`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -294,7 +294,7 @@ export default function MedicineCatalog() {
   // ── Delete ──────────────────────────────────────────────────────────────────
   const doDelete = async (id) => {
     try {
-      const res = await fetch(`${API}/admin/medicines/${id}`, {
+      const res = await fetch(`${BASE_URL}/admin/medicines/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -311,7 +311,7 @@ export default function MedicineCatalog() {
 
   const doBulkDelete = async () => {
     try {
-      const res = await fetch(`${API}/admin/medicines/bulk`, {
+      const res = await fetch(`${BASE_URL}/admin/medicines/bulk`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ids: [...selected] }),

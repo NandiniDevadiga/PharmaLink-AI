@@ -19,14 +19,39 @@ if not MONGODB_URI:
 # Robustly encode the password even if it contains special chars like '@', '#', etc.
 # Parses: scheme://username:password@host  where password may itself contain '@'
 def _encode_mongo_uri(uri: str) -> str:
+    """
+    Safely encode the password in a MongoDB URI, handling passwords that
+    contain special characters like '@', '#', '/', etc.
+
+    Strategy: split on '://' to get the authority part, then find the
+    FIRST ':' to separate username from 'password@host'. The host is
+    everything after the LAST '@', and the password is everything between
+    the first ':' and that last '@'.
+    """
     try:
-        # Match scheme://user:pass@host — password is everything between first ':' after user and last '@' before host
-        m = re.match(r'^(mongodb(?:\+srv)?://)([^:]+):(.+)@([^@]+)$', uri)
-        if m:
-            scheme, username, password, host = m.groups()
-            if '%' not in password:  # not already encoded
-                password = quote_plus(password)
-            return f"{scheme}{username}:{password}@{host}"
+        # Split off the scheme (mongodb:// or mongodb+srv://)
+        m = re.match(r'^(mongodb(?:\+srv)?://)(.+)$', uri)
+        if not m:
+            return uri
+        scheme, rest = m.groups()
+
+        # rest is now: username:password@host/...
+        colon_idx = rest.index(':')          # first colon separates user from pass
+        username = rest[:colon_idx]
+        after_user = rest[colon_idx + 1:]   # password@host/...
+
+        # The host starts after the LAST '@'
+        last_at = after_user.rfind('@')
+        if last_at == -1:
+            return uri  # no '@' found — URI is already in a weird state
+
+        password = after_user[:last_at]
+        host = after_user[last_at + 1:]
+
+        if '%' not in password:             # not already percent-encoded
+            password = quote_plus(password)
+
+        return f"{scheme}{username}:{password}@{host}"
     except Exception as e:
         print(f"Warning: Could not encode MongoDB URI: {e}")
     return uri

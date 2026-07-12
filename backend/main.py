@@ -11,6 +11,8 @@ Run with: uvicorn main:app --reload --port 8000
 
 from fastapi import FastAPI, Query, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from typing import Optional, List
@@ -25,9 +27,44 @@ from auth import (
 
 app = FastAPI(title="Pharmalink AI API")
 
+# Allowed origins — add any new frontend URLs here
+ALLOWED_ORIGINS = [
+    "https://pharmalink-ai-frontend.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+]
+
+# Low-level middleware: injects CORS headers on EVERY response,
+# including 500 errors where CORSMiddleware may not run.
+class ForceCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        origin = request.headers.get("origin", "")
+        # Handle preflight OPTIONS immediately
+        if request.method == "OPTIONS":
+            response = JSONResponse(content=None, status_code=204)
+            response.headers["Access-Control-Allow-Origin"] = origin if origin in ALLOWED_ORIGINS else ALLOWED_ORIGINS[0]
+            response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+            response.headers["Access-Control-Max-Age"] = "3600"
+            return response
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            response = JSONResponse({"detail": str(exc)}, status_code=500)
+        # Always attach CORS header
+        allow_origin = origin if origin in ALLOWED_ORIGINS else (ALLOWED_ORIGINS[0] if ALLOWED_ORIGINS else "*")
+        response.headers["Access-Control-Allow-Origin"] = allow_origin
+        response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+        return response
+
+app.add_middleware(ForceCORSMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten this in production
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -1271,9 +1308,6 @@ def bulk_upload_stock(payload: List[StockUploadItem], current_user: TokenData = 
     
     if new_stock:
         db.stock.insert_many(new_stock)
-        
-    global df_stock
-    df_stock = get_dataframe_from_mongo("stock")
     
     return {"message": f"Successfully updated stock list with {len(new_stock)} items for branch '{pharm_name}'."}
 

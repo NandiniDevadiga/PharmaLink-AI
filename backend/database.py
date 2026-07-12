@@ -1,31 +1,40 @@
 import os
+import re
 import pandas as pd
 from pymongo import MongoClient
 from dotenv import load_dotenv
-
 from urllib.parse import quote_plus
 
-# Load environment variables from backend/.env
+# Load environment variables from backend/.env (ignored on Vercel — set in dashboard)
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
-MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb+srv://nandini:<db_password>@cluster0.aiyiciq.mongodb.net/")
+MONGODB_URI = os.environ.get("MONGODB_URI", "")
 
-# Safely URL-encode the password if it contains special characters (like '@')
-if MONGODB_URI and "@" in MONGODB_URI:
+if not MONGODB_URI:
+    raise RuntimeError(
+        "MONGODB_URI environment variable is not set. "
+        "Add it in Vercel Dashboard → Project → Settings → Environment Variables."
+    )
+
+# Robustly encode the password even if it contains special chars like '@', '#', etc.
+# Parses: scheme://username:password@host  where password may itself contain '@'
+def _encode_mongo_uri(uri: str) -> str:
     try:
-        auth_part, host_part = MONGODB_URI.rsplit('@', 1)
-        if '://' in auth_part:
-            scheme, credentials = auth_part.split('://', 1)
-            if ':' in credentials:
-                username, password = credentials.split(':', 1)
-                # Only quote if not already URL-encoded
-                if '%' not in password:
-                    MONGODB_URI = f"{scheme}://{username}:{quote_plus(password)}@{host_part}"
+        # Match scheme://user:pass@host — password is everything between first ':' after user and last '@' before host
+        m = re.match(r'^(mongodb(?:\+srv)?://)([^:]+):(.+)@([^@]+)$', uri)
+        if m:
+            scheme, username, password, host = m.groups()
+            if '%' not in password:  # not already encoded
+                password = quote_plus(password)
+            return f"{scheme}{username}:{password}@{host}"
     except Exception as e:
-        print(f"Warning: Could not automatically format MongoDB URI: {e}")
+        print(f"Warning: Could not encode MongoDB URI: {e}")
+    return uri
+
+MONGODB_URI = _encode_mongo_uri(MONGODB_URI)
 
 # Setup MongoDB client and database
-client = MongoClient(MONGODB_URI)
+client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
 db = client.get_database("pharmalink")
 
 def get_dataframe_from_mongo(collection_name: str) -> pd.DataFrame:
